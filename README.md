@@ -91,4 +91,4 @@ Findings were confirmed against pingcli 1.3.0 and the `pingidentity/pingone` Ter
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+Apache License 2.0. See [LICENSE](LICENSE).

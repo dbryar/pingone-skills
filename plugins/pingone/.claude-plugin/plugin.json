@@ -10,7 +10,7 @@
   },
   "homepage": "https://github.com/dbryar/pingone-skills",
   "repository": "https://github.com/dbryar/pingone-skills",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": [
     "pingone",
     "davinci",
