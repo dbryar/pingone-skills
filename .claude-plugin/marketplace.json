@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "pingone-skills",
+  "description": "Field-tested skills for working with PingOne, DaVinci and the Terraform/OpenTofu providers that manage them.",
+  "owner": {
+    "name": "Daniel Bryar",
+    "url": "https://github.com/dbryar"
+  },
+  "plugins": [
+    {
+      "name": "pingone",
+      "source": "./plugins/pingone",
+      "displayName": "PingOne",
+      "description": "Three skills covering PingOne platform operations, DaVinci flow authoring, and Terraform/OpenTofu management of both.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Daniel Bryar",
+        "url": "https://github.com/dbryar"
+      },
+      "license": "MIT",
+      "category": "devops",
+      "keywords": [
+        "pingone",
+        "davinci",
+        "terraform",
+        "opentofu",
+        "pingcli",
+        "ciam",
+        "identity",
+        "oidc"
+      ],
+      "tags": [
+        "identity",
+        "infrastructure-as-code",
+        "ping-identity"
+      ]
+    }
+  ]
+}

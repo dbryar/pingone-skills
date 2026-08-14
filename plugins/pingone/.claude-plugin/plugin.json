@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "pingone",
+  "displayName": "PingOne",
+  "version": "0.1.0",
+  "description": "Skills for PingOne platform operations, DaVinci flow authoring, and Terraform/OpenTofu management of both. Built from findings confirmed against live tenants.",
+  "author": {
+    "name": "Daniel Bryar",
+    "url": "https://github.com/dbryar"
+  },
+  "homepage": "https://github.com/dbryar/pingone-skills",
+  "repository": "https://github.com/dbryar/pingone-skills",
+  "license": "MIT",
+  "keywords": [
+    "pingone",
+    "davinci",
+    "terraform",
+    "opentofu",
+    "pingcli",
+    "identity",
+    "oidc"
+  ]
+}
