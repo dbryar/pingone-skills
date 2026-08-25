@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 - 2026-08-25
+
+- `pingone:davinci` - custom claims on `returnSuccessResponseRedirect`. `accessTokenClaims` and `idTokenClaims` are independent lists; claim row shape and which fields are cosmetic; pasted claim blocks keeping the source flow's node IDs, which nothing validates; branch reachability of the node a terminal sources claims from; why not to override `sub`; guidance on which token identity claims belong in, and when putting them in the access token is a reasonable constraint.
+
 ## 0.1.0 - 2026-08-14
 
 Initial release.
