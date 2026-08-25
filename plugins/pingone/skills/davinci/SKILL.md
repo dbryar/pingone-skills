@@ -130,6 +130,37 @@ This is the right tool for a shared destination reached from several places, and
 
 A main flow ending on `createSuccessResponse` returns plain JSON and never establishes a PingOne authentication session or issues an authorization code. It looks like it completed.
 
+### Custom claims on the success terminal
+
+`returnSuccessResponseRedirect` carries two independent claim lists in its `properties`: `accessTokenClaims` and `idTokenClaims`. Populating one does nothing to the other. A terminal holding a full profile on one and a single claim on the other is doing exactly that, not expressing an intent.
+
+Each list is a `{ "value": [ ... ] }` wrapper over rows:
+
+| Field | Meaning |
+| --- | --- |
+| `name` | The claim name that reaches the token |
+| `value` | A Slate JSON **string**, following the binding rules under "Property encoding" |
+| `type` | `string` or `object` |
+| `key` | Studio's row identifier, a float. Only has to be unique within its own list |
+| `label`, `nameDefault` | Studio's display text and the source field it last offered. Cosmetic |
+
+`label` and `nameDefault` drift from `name` as rows are edited and are never reconciled, so read `name` and `value` and ignore the other two. A row labelled `Email (string)` whose value binds something else entirely is a normal thing to find in a working flow.
+
+**Claim rows copied between flows keep their `{{local.<nodeId>...}}` bindings.** The node ID names a node in the flow they came from, which does not exist in the destination graph. Nothing validates this at any layer: the rows import, store, and serve unchanged, and the claim is built from a binding with nothing behind it. Repoint every `local.` reference in a pasted block at a node that actually runs on the branch reaching that terminal, and remember that a terminal reached from several branches only sees the nodes that ran on the branch actually taken. A terminal shared by an interactive branch and a token-exchange branch cannot source claims from a lookup that runs on only one of them.
+
+**Do not set `sub`.** OpenID Connect Core §5.3.2 requires a relying party to reject a `/userinfo` response whose `sub` does not match the id token's, and conformant client libraries do check. An id token `sub` overridden to a username or an email fails that comparison on every request, and the relying party reports a token or identity error that names nothing in the flow.
+
+### Which token gets the identity claims
+
+Default to identity claims in the id token and an access token carrying only what authorises the call. That is the split the protocol is built on: the id token is an identity assertion for the client, the access token is a credential presented to resource servers, and RFC 9068 §6 treats identity detail in an access token as a privacy exposure precisely because it is forwarded to every resource it is presented to. A client reading identity out of an access token is also parsing a value it is not, in general, entitled to parse.
+
+Two things to check before you strip the id token back:
+
+- If the client refreshes tokens and rebuilds its user from the new id token rather than re-calling `/userinfo`, identity claims that exist only on the access token leave the profile as bare `sub` after the first renewal.
+- Conversely, if the resource server cannot call `/userinfo` or introspect, the access token is the only place it can read.
+
+That second case is common in an estate with older services, and it is a legitimate reason to put identity claims on the access token. Do it deliberately: keep the set to what the resource server actually consumes, note why it is there, and do not carry the arrangement into a new flow by copying the terminal.
+
 ## Error handling, and a trap worth an entire debugging session
 
 **A `customErrorMessage` node displays by returning control to the last-rendered screen.** It has no screen of its own. That gives it two properties:
