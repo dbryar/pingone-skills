@@ -44,6 +44,10 @@ The fields to read first on any node:
 
 **Edges do not carry branch conditions.** An edge is a link between node IDs and nothing more. Branching is expressed in the properties of the EVAL or connector node upstream of it. See "Branching" below.
 
+**Every node with no inbound edge is an entry point.** DaVinci starts the flow at all of them, not only the one you think of as the beginning, so there is no such thing as a disconnected node: an unwired node is a second start. An unwired terminal is the dangerous case. A `createSuccessResponse` with no inbound edge fires the moment the flow is entered and returns before any real work runs, so the caller receives an empty claim, every comparison downstream of it finds nothing to match and takes its default branch, and no screen renders.
+
+**This fails silently and convincingly.** Nothing errors, the JSON is valid, and `terraform plan` and `apply` both succeed, so neither is evidence the flow works. The flow terminates on whichever default it fell through to, which is a real named outcome, so reading the redirect suggests a routing bug in a router that is behaving correctly. A flow should have exactly one node with no inbound edge, its genuine entry, plus any `startNode` teleport targets. Count them before committing a flow change, and make it a build-time error if you generate flows programmatically.
+
 **Never draw an edge directly from one `CONNECTION` node to another.** The target screen renders and its controls silently stop responding, with no error anywhere. Put an EVAL between them. Every transition in a working graph has one.
 
 **Node positions are not decoration.** Spacing encodes readability of the control flow: a connector and its EVAL bound tightly together, gates sharing a column so a cascade reads as an if/else-if chain, a default path set visibly further away than a gate outcome. If you generate flows programmatically, hold the layout explicitly and make a missing layout entry an error rather than defaulting a node to another node's position or to `(0,0)`. Nodes stacked at the origin still produce valid JSON that applies cleanly.
@@ -116,7 +120,7 @@ A subflow returns through `httpConnector` / `createSuccessResponse`. A main flow
 `nodeConnector`'s `goToNode` and `startNode` pair transfers control by reference rather than by edge:
 
 - `goToNode` carries only `nodeInstanceId` and has **no outgoing edge**.
-- `startNode` is a `type: "trigger"` named re-entry point and **needs no inbound edge to be reachable**.
+- `startNode` is a `type: "trigger"` named re-entry point and **needs no inbound edge to be reachable**. It is the only node type that legitimately has none; see "The graph model" for why any other unwired node runs on entry.
 
 This is the right tool for a shared destination reached from several places, and for a failure branch that must reach a specific screen rather than falling back to the last-rendered one. Using it means a shared "Success", "Error" or "No session" node can exist exactly once with no long edges dragged across the canvas to it. Sharing a destination and sharing a jump node are separate decisions; one `goToNode` can serve several nearby callers.
 
