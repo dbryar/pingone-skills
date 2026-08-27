@@ -6,6 +6,18 @@ This file is the history; the `SKILL.md` files are the current state. When a ski
 
 Entries are added by `/pingone:learn`, which will not write one until the finding is confirmed against a real system. Unconfirmed material is welcome here, marked as such, and does not go into a skill.
 
+## 2026-08-27 - a node with no inbound edge is an entry point, and an unwired terminal returns on load
+
+**Skill:** davinci
+**Confirmed by:** A subflow generated with 12 of its edges missing (91 nodes / 71 edges) returned an empty payload to its caller and terminated with no screen rendered; the same flow with those edges present (91 / 83) rendered its screen and completed. Reproduced for two different users from a cleared browser state, and the corrected flow verified end to end afterwards.
+**Versions:** n/a - graph semantics, not a provider or CLI behaviour
+
+The skills covered `startNode` needing no inbound edge, which reads as if being unwired is a property of that node type. It is not: DaVinci treats *every* node with no inbound edge as a place the flow starts, and `startNode` is simply the one where that is intended.
+
+The consequence is worst for terminals. An unwired `createSuccessResponse` fires on entry and returns before anything has run, so a caller gets a blank claim and every downstream comparison silently takes its default branch. Nothing errors, the graph is valid, and `terraform plan` and `apply` both succeed. The flow ends on a real, named outcome that has nothing to do with the actual failure, so the redirect points the reader at whichever router defaulted rather than at the disconnected node.
+
+Added the rule to "The graph model" in `davinci/SKILL.md`, next to the existing edge-level rules, with a pointer from the `startNode` line in "Teleports" so the two do not contradict each other. Deliberately left out: the specific generator bug that dropped the edges, which was local tooling rather than anything about DaVinci.
+
 ## Format
 
 ```markdown
