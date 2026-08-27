@@ -120,6 +120,34 @@ A subflow returns through `httpConnector` / `createSuccessResponse`. A main flow
 
 This is the right tool for a shared destination reached from several places, and for a failure branch that must reach a specific screen rather than falling back to the last-rendered one. Using it means a shared "Success", "Error" or "No session" node can exist exactly once with no long edges dragged across the canvas to it. Sharing a destination and sharing a jump node are separate decisions; one `goToNode` can serve several nearby callers.
 
+## Forms, and the vocabulary that actually renders
+
+A form is a PingOne object with its own ID, provisioned separately (see `pingone:terraform`'s `pingone_form`). A flow shows one through `pingOneFormsConnector`'s `showForm` capability, and the node carries only a reference:
+
+```jsonc
+{
+  "capabilityName": "showForm",
+  "connectorId": "pingOneFormsConnector",
+  "capabilityClass": "render",
+  "properties": {
+    "form":     { "value": "<form id>" },
+    "formData": { "value": [ { "key": "user.username", "value": "" } ] }
+  },
+  "outcomes": [ { "result": "submit", "label": "<the form's button text>" } ]
+}
+```
+
+- **One `submit` outcome per form.** Branch after the form on what was submitted, not by the form offering several exits.
+- **`formData` keys must exist on the referenced form.** A key that does not match binds to nothing, and nothing in the flow JSON says so.
+
+**A form is the only screen a native or SDK-driven client can render.** A `customHTMLTemplate` screen is an HTML document with no field structure, and the client SDKs refuse it: DaVinci marks an SDK-renderable response with `isResponseCompatibleWithMobileAndWebSdks`, and a `customHTMLTemplate` response does not carry the flag. Check for that flag rather than inspecting generated JSON, because it is the platform's own verdict.
+
+**Three vocabularies, and the narrowest one binds.** The form builder authors 24 field types. The JavaScript client SDK implements collectors for 21. The Android SDK implements 14: `TEXT`, `PASSWORD`, `PASSWORD_VERIFY`, `SUBMIT_BUTTON`, `FLOW_BUTTON`, `FLOW_LINK`, `LABEL`, `COMBOBOX`, `CHECKBOX`, `DROPDOWN`, `RADIO`, `DEVICE_REGISTRATION`, `DEVICE_AUTHENTICATION`, `PHONE_NUMBER`. The seven it lacks are `SOCIAL_LOGIN_BUTTON`, `PROTECT`, `POLLING`, `AGREEMENT`, `IMAGE`, `REGISTER` and `SINGLE_CHECKBOX`.
+
+**The failure is silent and looks like success.** A field the SDK has no collector for is omitted from the node's collector list rather than raising, so the screen renders looking complete, cannot be submitted, and says nothing about why. A browser-based review of the same form passes, because the web SDK's vocabulary is wider. Author every shared form to the narrowest consuming SDK and check it at authoring time; there is nothing to catch it later.
+
+Read a client SDK's vocabulary from its implementation rather than its published types. The JavaScript SDK's own `StandardField` type union declares `BUTTON` and `SINGLE_SELECT`, and neither has a case in the code that maps fields to collectors.
+
 ## Terminals
 
 | Situation | Correct terminal |

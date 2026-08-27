@@ -113,6 +113,25 @@ A `lifecycle.precondition` asserting no placeholder survived substitution is the
 
 Ordering needs no `depends_on`. The caller's substitution references the subflow's `id`, and it must also depend on the subflow's `pingone_davinci_flow_deploy`, since `subFlowVersionId: -1` resolves to the latest **deployed** version.
 
+## `pingone_form`
+
+A form is a first-class PingOne object, not flow content. A DaVinci `showForm` node holds only a reference to one, so the form and the flow that shows it are separate resources with separate lifecycles. Confirmed against `pingidentity/pingone` provider schema, 27-08-2026.
+
+`name`, `cols`, `components` and `environment_id` are required. `category`, `description`, `mark_optional`, `mark_required`, `text_auto_complete_enabled`, `password_auto_complete_enabled` and `translation_method` are optional. `id`, `field_types` and `language_bundle` are computed.
+
+- **`components.fields[]` carries a `position = { row, col }` per field**, not an implicit document order. `col` is 0 to 3, `row` up to 50, and `cols` on the resource sets the grid width.
+- **`field_types` resolves at plan time, not apply time.** A plan for a new form prints the actual set the provider derived from the fields, which makes it a usable check that a form contains what was intended before anything is created.
+- **The field `type` enum is wider than any client can render.** It accepts `AGREEMENT`, `CHECKBOX`, `COMBOBOX`, `DEVICE_AUTHENTICATION`, `DEVICE_REGISTRATION`, `DIVIDER`, `DROPDOWN`, `EMPTY_FIELD`, `ERROR_DISPLAY`, `FIDO2`, `FLOW_BUTTON`, `FLOW_LINK`, `PASSWORD`, `PASSWORD_VERIFY`, `PHONE_NUMBER`, `POLLING`, `QR_CODE`, `RADIO`, `RECAPTCHA_V2`, `SINGLE_CHECKBOX`, `SLATE_TEXTBLOB`, `SOCIAL_LOGIN_BUTTON`, `SUBMIT_BUTTON` and `TEXT`. **The SDKs collect a subset, and the mobile SDK collects the smallest subset of all.** A field outside what the consuming SDK collects is dropped from the rendered form rather than raising, so the form renders looking complete and cannot be submitted. Author to the narrowest consumer, and see `pingone:davinci` for the per-SDK vocabularies.
+- **Field keys are directory attribute paths.** A sign-on form's fields are keyed `user.username` and `user.password`, which are PingOne user-attribute paths rather than names of your choosing, and a flow node's `formData` binds those exact keys.
+- **Labels are Slate rich-text JSON, and localisation is separate from your own.** A label carries an embedded `i18n` key with a `defaultTranslation`, backed by the computed `language_bundle`. Form copy therefore lives somewhere other than wherever the rest of a journey's screen text lives.
+- **Check before creating.** PingOne ships stock forms in a new environment. Adding one with the same purpose creates a second rather than adopting the existing one, the same trap connector instances have.
+
+### Form references need the same substitution as subflows
+
+A `showForm` node holds the form's ID in `properties.form.value`, and `properties` is an opaque string, so the provider has nothing structured to compute against. This is the `subFlowId` problem again and it takes the same treatment: emit a deterministic token from the generator, `replace()` over the whole file text before `jsondecode()`, and assert with a `lifecycle.precondition` that no token survived.
+
+It fails the same way too. `replace()` returns the string unchanged when the two sides disagree, the flow applies cleanly carrying a literal placeholder, and it surfaces only at runtime as a form that does not resolve. Neither `validate` nor `plan` can see it.
+
 ## Deploy and flow policy
 
 `pingone_davinci_flow_deploy` is a separate resource, not an attribute of the flow. It takes `flow_id` and an optional `deploy_trigger_values` map; any changed value forces a redeploy. That redeploy shows in a plan as a destroy plus create. **This is the resource's designed behaviour, not an unintended loss**, and it is worth recognising on sight so nobody aborts a correct apply over it.

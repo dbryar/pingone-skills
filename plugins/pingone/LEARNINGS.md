@@ -4,6 +4,38 @@ Newest first. One entry per finding.
 
 This file is the history; the `SKILL.md` files are the current state. When a skill is corrected, the wrong instruction is rewritten in place and the fact that it was wrong is recorded here. That split is deliberate: a reader following a skill should not have to work out which of two competing statements is current, and a maintainer deciding whether to trust a rule should be able to see how it was established.
 
+## 2026-08-27 - Forms are separate PingOne objects, and three field vocabularies disagree
+
+**Skill:** terraform (resource shape, form-ID substitution), davinci (showForm node, field vocabularies)
+**Confirmed by:** `tofu providers schema -json` for the `pingone_form` resource and its field `type` enum; a targeted `tofu plan` for a newly declared form; a real exported form and a real exported flow using seven `showForm` nodes; the JavaScript SDK's own field-to-collector switch; the Android SDK's `classes.jar` class list and the README bundled in its sources jar.
+**Versions:** `pingidentity/pingone` provider (schema read 27-08-2026) / `@forgerock/davinci-client` 2.1.1 / `com.pingidentity.sdks:davinci` 1.2.0
+
+Neither skill covered forms at all. A form turns out not to be flow content: it is a first-class
+PingOne object with its own ID and lifecycle, and a `showForm` node holds nothing but a reference
+to it in `properties.form.value`. Because `properties` is an opaque string, that reference needs
+the same token-and-`replace()` substitution the skill already documents for `subFlowId`, and it
+fails the same silent way, applying cleanly with a literal placeholder that neither `validate` nor
+`plan` can see.
+
+The finding with the most consequence is a three-way vocabulary mismatch. The form builder authors
+24 field types, the JavaScript SDK collects 21, and the Android SDK collects 14. A field outside
+the consuming SDK's set is **dropped from the node's collector list rather than raising**, so the
+screen renders looking complete, cannot be submitted, and gives no indication why. A browser-based
+review does not catch it, because the web vocabulary is the wider one. This is why the rule is to
+author to the narrowest consuming SDK at authoring time.
+
+Also recorded: a client SDK's published types are not a safe source for its vocabulary. The
+JavaScript SDK's `StandardField` union declares `BUTTON` and `SINGLE_SELECT`, and neither has a
+case in the code that builds collectors. The implementation is the authority.
+
+Deliberately not recorded: whether `SLATE_TEXTBLOB` and `ERROR_DISPLAY`, both present in PingOne's
+stock sign-on form and absent from both SDKs, are rewritten by DaVinci before a client sees them.
+`LABEL` is collectable by both SDKs and is not a form field type, which makes a `SLATE_TEXTBLOB` to
+`LABEL` rewrite the obvious explanation, but that is a hypothesis and no `showForm` response has
+been captured to settle it. Nothing about apply-time behaviour is recorded either; the form was
+planned, not applied.
+
+
 Entries are added by `/pingone:learn`, which will not write one until the finding is confirmed against a real system. Unconfirmed material is welcome here, marked as such, and does not go into a skill.
 
 ## Format
