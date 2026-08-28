@@ -102,6 +102,8 @@ Binding forms:
 
 Binding a subflow to a caller variable is the most expensive error on this list, because it fails silently in the worst possible way. The comparison does not error. It compares against nothing, takes the mismatch branch every time, and the flow looks like it is working correctly and simply never taking the matching path.
 
+**Company variables are the exception, and they resolve everywhere a subflow can reach**, including inside a screen's `customScript`: `{{global.company.variables.<name>}}` belongs to the environment rather than to the caller. Only `{{global.variables.<name>}}` is the one that silently answers with nothing.
+
 **A subflow input is passed as its own top-level property on the calling node**, named for the subflow's `input_schema` property. It is not a nested `inputSchema` list. Getting this wrong fails the subflow call outright, which at least is loud.
 
 `subFlowVersionId: -1` resolves to the latest *deployed* version, so a subflow must be deployed, not merely applied, before a caller can reach it.
@@ -182,10 +184,12 @@ Error text reaches the screen through empty `data-skcomponent="skerror"` and `da
 
 The content comes from `errorConnector`'s `errorMessage` property, not `errorDescription`.
 
-**The error re-render patches only the error region.** The screen's inline `customScript` does not re-run. Anything the script was doing, such as swapping labels for a brand or locale, is not reapplied. The tell is that other script-driven changes correctly do *not* revert on that same re-render, which only makes sense if the DOM patch is partial.
+**The error re-render patches only the error region**, which is one case of the general rule that a screen is painted once — see "A screen is painted once" below. Anything the script was doing, such as swapping labels for a brand or locale, is not reapplied.
 
 ## The HTML/CSS/JS surface
 
+- **A screen is painted once.** Re-entering the same `customHTMLTemplate` node — a loop back to it, a resubmission, an error re-render — does not replace the DOM and does not re-run `customScript`. Confirmed by marking an element with a `data-` attribute before a loop that demonstrably re-executed the node, its connector call having really run, and finding the mark still there afterwards. So everything a screen must do for as long as it is on screen has to be done by that one execution: state armed at render covers the first pass and no later one, and a value substituted into the script is the value from the first render forever. Nothing errors — the screen simply keeps showing what it already showed.
+- **`disabled` on a `data-skcomponent="skbutton"` element belongs to the widget, not to your script.** A value set from `customScript` does not survive a submission round trip; the widget re-enables its own buttons, silently, with nothing in your code having run. Gate a control with a class on your own container plus a `click` listener captured on `document`, which runs ahead of the widget's own handler and can `stopImmediatePropagation`. Drive the visual state from that same class, so there is one state rather than two that can disagree. `pointer-events: none` is a hint and not a gate: it stops a pointer, not a keyboard and not a programmatic `.click()`. What the widget leaves alone is what is yours — your container's class, your `data-` attributes, and a `hidden` your script cleared at render all survive the same round trip.
 - **`customHTML` is a fragment.** Document wrapper tags are ignored; inline `<style>` does nothing. Use `settings.css` with `use_custom_css`.
 - **Literal `onclick="..."` attributes are stripped** by DaVinci's server-side sanitisation before the markup is served. Give the element a stable `id` and attach the handler from `customScript`. Markup injected client-side by `customScript` via `innerHTML` survives, because sanitisation has already run by then.
 - **A form on a `customHTMLTemplate` screen submits to** `POST /davinci/connections/<connectionId>/capabilities/customHTMLTemplate`.

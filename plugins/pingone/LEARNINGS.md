@@ -6,6 +6,22 @@ This file is the history; the `SKILL.md` files are the current state. When a ski
 
 Entries are added by `/pingone:learn`, which will not write one until the finding is confirmed against a real system. Unconfirmed material is welcome here, marked as such, and does not go into a skill.
 
+## 2026-08-28 - a screen is painted once, and `disabled` on an skbutton is the widget's
+
+**Skill:** davinci
+**Confirmed by:** A hosted screen whose flow looped back to the same `customHTMLTemplate` node. The loop demonstrably re-executed the node — its connector call ran and re-issued a one-time code, and the new code validated where the previous one no longer did — while an element marked with a `data-` attribute before the loop still carried that mark 45 seconds later. Counters written into the DOM from the screen's own script survived the round trip with their values continuing from the first execution rather than restarting, so the script did not run a second time. In the same trace, the script's click handler fired, set `disabled` on an skbutton, and the button read enabled nine seconds later with no path in the script having cleared it; the same script's first arming of that state, before any submission, held correctly for its full 60 seconds. Company-variable substitution was confirmed by a control in the opposite direction: the screen offered a control only when a company-scoped limit read greater than zero, and the control was offered.
+**Versions:** n/a - widget and flow-runtime behaviour, not a provider or CLI
+
+The skills said the error re-render patches only the error region and does not re-run `customScript`. That was true and too narrow: it is not a property of error re-renders. **Any** re-entry to the same screen node leaves the DOM alone and the script un-run, so a screen gets exactly one execution for its whole life. Rewrote that line to point at the general rule and added the rule to "The HTML/CSS/JS surface".
+
+The practical cost of the narrow version is that anything armed at render — a countdown, a disabled control, a rate limit — covers the first pass and no later one, while looking correct on the pass anyone tests first. Nothing errors and the screen keeps showing what it showed.
+
+Also added: a script-set `disabled` on an element carrying `data-skcomponent="skbutton"` does not survive a submission. The widget owns that property on its own components and restores it, so a control gated that way looks gated in the DOM and refuses nothing. Gate with a class on your own container plus a `document`-captured click listener instead, and drive the visuals from the same class. `pointer-events: none` is worth having and is not the gate — it stops a pointer, not a keyboard and not `.click()`. What the widget does not touch is your own container class, your `data-` attributes, and a `hidden` your script cleared.
+
+Third, smaller: `{{global.company.variables.<name>}}` resolves inside a subflow, including inside a screen's `customScript`. The skill's subflow section warned only about `global.variables`, which left it open whether the company namespace was reachable from a subflow at all. Added one line next to that warning.
+
+Deliberately left out: the mechanism behind the `disabled` restoration. That the widget re-enables its buttons when a submission's response lands is the obvious reading and was not observed directly — what was observed is that a script-set value does not survive the round trip, which is what a reader needs either way.
+
 ## 2026-08-27 - a node with no inbound edge is an entry point, and an unwired terminal returns on load
 
 **Skill:** davinci
