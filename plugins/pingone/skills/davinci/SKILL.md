@@ -50,6 +50,8 @@ The fields to read first on any node:
 
 **Never draw an edge directly from one `CONNECTION` node to another.** The target screen renders and its controls silently stop responding, with no error anywhere. Put an EVAL between them. Every transition in a working graph has one.
 
+**A node's description is rendered inside the node, so its length is the node's height.** Studio flags a node with no description, so the answer is a short one rather than none: one paragraph saying what the node does. Why it is built that way belongs in whatever generates the flow and in the design it is generated from. Put it in `nodeDescription` instead and the boxes grow until the canvas cannot be read at a glance — a cost paid by every later reader, on a flow that applies cleanly and never warns. If you generate flows, cap the length in the generator; nothing on the platform side will.
+
 **Node positions are not decoration.** Spacing encodes readability of the control flow: a connector and its EVAL bound tightly together, gates sharing a column so a cascade reads as an if/else-if chain, a default path set visibly further away than a gate outcome. If you generate flows programmatically, hold the layout explicitly and make a missing layout entry an error rather than defaulting a node to another node's position or to `(0,0)`. Nodes stacked at the origin still produce valid JSON that applies cleanly.
 
 ## Property encoding

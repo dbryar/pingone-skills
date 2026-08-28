@@ -6,6 +6,18 @@ This file is the history; the `SKILL.md` files are the current state. When a ski
 
 Entries are added by `/pingone:learn`, which will not write one until the finding is confirmed against a real system. Unconfirmed material is welcome here, marked as such, and does not go into a skill.
 
+## 2026-08-28 - a node's description is its height on the canvas
+
+**Skill:** davinci
+**Confirmed by:** Reading a published flow's canvas. Descriptions run from roughly 50 to 480 characters across one 115-node flow, and node height tracks that directly: the longest turn into tall columns of body text several times the height of a node carrying one sentence, to the point where the diagram stops being readable at normal zoom.
+**Versions:** n/a - Studio canvas rendering
+
+Nothing in the skills said where a `nodeDescription` ends up. It is rendered inside the node body, so a description written as a paragraph of reasoning becomes a tall box, and a flow full of them becomes a diagram nobody can take in.
+
+The pull is real and worth naming: a description is the obvious place to record why a node is built the way it is, especially in a generated flow where the surrounding code comments are not visible to whoever opens Studio. The cost is not visible from the authoring side at all — the flow applies cleanly, nothing warns, and the damage only shows on a canvas someone else opens later.
+
+Added the rule to "The graph model" beside the note on positions, since both are about a flow staying readable. Recommended capping the length in the generator, because the platform will not.
+
 ## 2026-08-28 - a screen is painted once, and `disabled` on an skbutton is the widget's
 
 **Skill:** davinci
