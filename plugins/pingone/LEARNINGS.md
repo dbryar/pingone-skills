@@ -21,6 +21,36 @@ and whether it is silent. What changed in the skill files, or why nothing did.
 
 ---
 
+## 2026-08-31 - A collection endpoint returning 500 means one poisoned row, not an outage
+
+**Skill:** terraform
+**Confirmed by:** deleting the single connector instance whose specific-ID `GET` had returned 500 for weeks, and watching `GET /connectorInstances` go from 500 to 200 with all 17 instances present, on the next request
+**Versions:** pingidentity/pingone ~> 1.21
+
+An environment's `GET /connectorInstances` list returned 500 continuously for roughly three weeks
+while specific-ID reads of individual instances returned 200. This was recorded, including in the
+first version of the entry below, as a PingOne-side outage of the list endpoint, and a workaround was
+built around it: adopt by specific-ID read, accept that discovery is unavailable.
+
+That was wrong. Exactly one instance in the environment was unreadable — its own specific-ID `GET`
+returned 500 on every attempt across three weeks, while every other instance returned 200. The list
+endpoint was failing because it could not render that one member. **PingOne collection endpoints
+fail whole rather than skipping a member they cannot serialise.** Deleting the single bad record
+restored the list on the next request.
+
+The practical consequence is a diagnostic rather than a fix: a 500 from a collection endpoint is
+evidence about one unidentified row, not about the collection. Walk the IDs you know individually;
+the one that 500s while its neighbours return 200 is the cause.
+
+Two properties of such a record, both confirmed and both counterintuitive. It **can be deleted**
+despite never having been readable — `DELETE` returned 204 and the follow-up `GET` returned 404. And
+it **cannot be imported**, because `tofu import` needs a read first, so a broken record can only be
+replaced, never adopted. Ruled out by control along the way: it is not that `ping`-category
+connectors with no `properties` are unserialisable, since a throwaway instance of the same connector
+with the same null properties read back 200 twice and deleted cleanly.
+
+---
+
 ## 2026-08-31 - The connector catalogue is the authority on default instance names
 
 **Skill:** davinci
@@ -68,10 +98,10 @@ One reliable discriminator: instances created through the console carry a `custo
 Terraform-created ones do not. That held across every instance in the dump examined, managed and
 unmanaged.
 
-Also confirmed incidentally: `GET /connectorInstances` (the list) returns HTTP 500 while specific-ID
-`GET /connectorInstances/{id}` on the same environment returns 200. This matters because the list is
-what the "check before creating" rule depends on, and `tofu import` needs only the specific-ID read,
-so adoption can proceed during a period when discovery cannot.
+Also observed: `GET /connectorInstances` (the list) returned HTTP 500 while specific-ID
+`GET /connectorInstances/{id}` on the same environment returned 200. The reason for that split is
+recorded in the entry above, which supersedes the reading given here — it was not an API-wide
+condition to work around.
 
 Skills updated: the terraform skill's "Adopting what already exists" now says the side effect recurs,
 that `plan` cannot detect it, and gives the state-rm / import / apply / delete order, with the
