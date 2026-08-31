@@ -21,6 +21,27 @@ and whether it is silent. What changed in the skill files, or why nothing did.
 
 ---
 
+## 2026-08-31 - A node's declared outcome routes nowhere unless its edge claims it
+
+**Skill:** davinci
+**Confirmed by:** Four deployed versions of one flow in a live sandbox, driven end to end by `@forgerock/davinci-client` in a real browser, with DaVinci's own flow-execution logs read from Studio for each. v5 (no outcome, plain edge), v6 (outcome added, plain edge) and v7 (outcome plus corrected downstream bindings) all failed identically; v8 (outcome plus the edge carrying `multi_value_source_id`) completed and issued a real authorization code. Edge and node schemas read from a `tofu providers schema -json` dump.
+**Versions:** pingone provider 1.21.0 / @forgerock/davinci-client 2.1.1 / com.pingidentity.sdks:davinci 2.1.0
+
+Previously the skill said an edge is "a link between node IDs and nothing more" and that "there is no edge-level label anywhere". Both are wrong. `edge.data` carries `multi_value_source_id`, which names which exit of the source node the edge leaves by, and it is **required** on every edge leaving a node with more than one named exit — a multi-select's options, or any node declaring `outcomes`.
+
+The failure is silent and actively misleading. The connector executes and the flow log records it succeeding in a few milliseconds, reporting its result; then **no downstream node is logged at all**. The interaction runs out `flowHttpTimeoutSeconds` and the client receives `400` with `code: "requestTimedOut"` and a `CONSTRAINT_VIOLATION` saying "a capability took longer than allowed or the flow was misconfigured". Nothing timed out and no capability was slow — the result had nowhere to go. A connector log reporting success with no subsequent node entry, plus a client-side timeout, is the signature.
+
+Two hypotheses were tested and disconfirmed first, both about the node rather than the edge: a missing `outcomes` declaration (real defect, worth fixing, not the cause) and a downstream function binding a whole node payload object rather than named fields (also worth fixing, also not the cause). Nothing in the symptom pointed at the edge, which is why the lint rule is now stated explicitly.
+
+Recorded alongside, from the same session:
+
+- `isResponseCompatibleWithMobileAndWebSdks` appears **only on the completed response**, never on a screen response, and no implementation file in the JavaScript client reads it — one occurrence, in a type declaration. It is not a renderability gate. Both the JavaScript and Android clients build collectors from a top-level `form.components.fields` and nothing else.
+- The embedded SDK surface needs a **CORS allow-list on the OIDC client**, because the SDK calls `/as/authorize` via `fetch` from the page origin. A client created for a redirect journey has none.
+- Driving the SDK from a **server-side JavaScript runtime fails identically against a known-working flow**, so a failure there says nothing about the flow. Debug embedded surfaces in a browser.
+- A form field keyed `user.username` is authored and submitted **dotted** and returned to the flow **nested** (`output.formData.user.username`).
+- `pingOneFormsConnector` is a **`core`-category** connector (`metadata.type`), so `properties = null` and no environment credential, despite the name.
+- A Studio export spells the edge field `multiValueSourceId`; the provider spells it `multi_value_source_id`. Carrying the camelCase spelling into HCL makes Terraform drop it silently.
+
 ## 2026-08-14 - Initial skill set
 
 **Skill:** core, davinci, terraform
