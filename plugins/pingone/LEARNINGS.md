@@ -21,6 +21,32 @@ and whether it is silent. What changed in the skill files, or why nothing did.
 
 ---
 
+## 2026-08-31 - The connector catalogue is the authority on default instance names
+
+**Skill:** davinci
+**Confirmed by:** `GET /v1/environments/{envId}/connectors` against a live environment (230 connectors), cross-checked against the names on instances Studio created unprompted in that same environment
+**Versions:** pingidentity/pingone ~> 1.21
+
+Follow-on from the duplication entry below. That one said to name a managed connector instance after
+the connector's catalogue name without saying what those names are, which leaves the reader guessing
+at exactly the point the guess is wrong: the connector id does not predict the name. `nodeConnector`
+is `Teleport`, `flowConnector` is `Flow Conductor`, `errorConnector` is `Error Message`,
+`pingOneFormsConnector` is `Form`. A reader inventing `FlowConnectorInstance` or `flowConnector`
+lands back in the indistinguishable-from-a-duplicate state the rule exists to avoid.
+
+The catalogue endpoint returns `name` and `metadata.type` together, so one read answers both the
+naming question and the which-`properties`-shape question. `reference/connectors.md` gains the table
+for the connectors in confirmed use, and the `SKILL.md` bullet now points at it rather than carrying
+a partial second copy.
+
+Worth noting for anyone building the same capture: capability names are **not** available from the
+Management API, on the list or on a single connector. Only `name`, `metadata.type`, `version`,
+`description` and timestamps are. Capabilities exist only in the DaVinci API's own connector
+catalogue, which returns each capability's full property schema alongside them and runs to 27MB for
+230 connectors against 24KB for the same set stripped to name/type/version.
+
+---
+
 ## 2026-08-31 - Studio duplicates a connector instance after your apply, not only before it
 
 **Skill:** terraform, davinci
