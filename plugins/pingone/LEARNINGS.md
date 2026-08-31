@@ -21,6 +21,16 @@ and whether it is silent. What changed in the skill files, or why nothing did.
 
 ---
 
+## 2026-09-01 - A node's outcomes each need their own EVAL, not a shared one
+
+**Skill:** davinci
+**Confirmed by:** Two deploys of one subflow against a live tenant, driven through a browser. A form node with a submit button and two flow buttons declared three outcomes, each claimed by its own edge with `multi_value_source_id` set. With all three edges pointing at one shared EVAL, the submit exit routed and both flow-button exits returned `400 requestTimedOut`. Adding two more EVALs so each edge had its own, and changing nothing else — same outcome ids, same `multi_value_source_id` values, same result strings, same form — made all three exits route. The working submit exit is the control: it behaved identically across both deploys.
+**Versions:** n/a (flow engine behaviour, not provider or CLI)
+
+The skill already carried the rule that a declared outcome needs its edge to claim it through `multi_value_source_id`. That rule is correct and unchanged, but it was the only documented cause of the `requestTimedOut` signature, so a flow that satisfied it and still timed out looked like evidence that something else entirely was wrong. In this case it produced a confident and completely wrong conclusion — that a flow button's outcome `result` must not be its field key, since declaring the keys as results "did not work". The result strings had been right the whole time; the evaluator fan-out was the fault.
+
+Both faults present identically: the node logs success in milliseconds, no downstream node is logged at all, and the client sees `400` with `requestTimedOut` after the flow's HTTP timeout. Neither is visible in the flow JSON without knowing to look. Added the sibling rule immediately after the existing one, with the pairing called out in both directions, because the diagnostic difficulty is entirely in telling them apart rather than in fixing either.
+
 ## 2026-08-31 - A node's declared outcome routes nowhere unless its edge claims it
 
 **Skill:** davinci
