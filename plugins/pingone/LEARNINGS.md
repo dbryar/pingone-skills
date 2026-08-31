@@ -21,6 +21,44 @@ and whether it is silent. What changed in the skill files, or why nothing did.
 
 ---
 
+## 2026-08-31 - Studio duplicates a connector instance after your apply, not only before it
+
+**Skill:** terraform, davinci
+**Confirmed by:** a connector-instances dump from a live environment, ordered by `createdDate`, cross-referenced against `tofu state list` and the connector catalogue from `GET /environments/{envId}/connectors`; specific-ID `GET /connectorInstances/{id}` on each duplicate pair
+**Versions:** pingidentity/pingone ~> 1.21
+
+Both skills said to check for an existing connector instance before adding a resource, which framed
+the problem as a one-time ordering question: Studio got there first, so adopt instead of create. That
+is only half of it. The creation-time ordering shows Studio also creates an instance for a connector
+Terraform is *already* managing, twelve and fourteen days after the apply that created the managed
+one, when someone next opened a flow using that connector on the canvas.
+
+The failure is entirely silent and has no expiry. The duplicate is not in state, so `plan` is clean
+forever; flows bind by instance ID, so nothing misbehaves; and the environment simply accumulates
+pairs. It surfaces only when the duplication is promoted to another environment, or when a human
+looks at the connector list and cannot tell which of two instances is the real one.
+
+One reliable discriminator: instances created through the console carry a `customerId` field and
+Terraform-created ones do not. That held across every instance in the dump examined, managed and
+unmanaged.
+
+Also confirmed incidentally: `GET /connectorInstances` (the list) returns HTTP 500 while specific-ID
+`GET /connectorInstances/{id}` on the same environment returns 200. This matters because the list is
+what the "check before creating" rule depends on, and `tofu import` needs only the specific-ID read,
+so adoption can proceed during a period when discovery cannot.
+
+Skills updated: the terraform skill's "Adopting what already exists" now says the side effect recurs,
+that `plan` cannot detect it, and gives the state-rm / import / apply / delete order, with the
+ordering constraint that the orphan is deleted only after dependent flows have been re-applied. The
+davinci skill's connector notes gained the naming convention and a pointer to that procedure.
+
+**Not asserted, because it was not confirmed:** that naming a managed instance with the connector's
+catalogue default name stops Studio creating a duplicate. It is the obvious hypothesis, but the
+matching rule Studio actually uses was not established, and there is a data point against it: an
+instance renamed *away* from its catalogue default did not subsequently acquire a Studio-created
+twin despite that connector being authored on the canvas again. The naming convention is recorded as
+a legibility measure, not a preventative.
+
 ## 2026-08-14 - Initial skill set
 
 **Skill:** core, davinci, terraform

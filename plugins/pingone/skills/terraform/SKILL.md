@@ -47,6 +47,10 @@ Prefer `import` blocks or `tofu import` over letting Terraform create a second c
 
 The trap: an object created as a side effect already exists by the time your code declares it. Adding it to an existing `for_each` set creates a duplicate rather than adopting the original. **Check for an existing instance before adding any resource that the console or Studio may already have created for you.** DaVinci connector instances are the standard case: Studio creates one the moment a node using that connector is first authored.
 
+**Checking once, before you write the resource, is not enough.** The side effect recurs. Studio creates its own connector instance the first time a connector is used on a canvas whether or not a Terraform-managed instance for that same connector already exists, so duplicates appear days or weeks *after* a clean apply, whenever someone next opens the flow. Nothing surfaces this: the extra instance was never in state, so `plan` stays empty indefinitely, and a flow keeps working because it binds by instance ID. The cost is paid later, when the same duplication is carried into the next environment and it stops being obvious which of two instances a flow should reference.
+
+Audit for it on a schedule rather than trusting the plan. Console-created DaVinci connector instances carry a `customerId` field that Terraform-created ones do not, which separates the two populations in one pass over the connector-instances list. To reconcile a duplicate: `state rm` the Terraform-managed copy, `import` the console-created one to the same address, apply so every dependent flow re-resolves to the surviving ID, and only then delete the orphan. Deleting before the dependent flows have been re-applied leaves them pointing at an instance that no longer exists.
+
 ### Restructuring without destroying
 
 Use `moved` blocks, not `terraform state mv`. A `moved` block is reviewable, lands in the same commit as the restructure, and lets `plan` prove the move is a pure relocation. Confirm the plan shows the resources moved with zero attribute diff and zero destroyed before applying.
