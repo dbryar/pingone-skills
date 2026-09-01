@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4 - 2026-09-01
+
+- `pingone:davinci` - connector instances. Studio creates a duplicate the first time a connector is opened on a canvas, whether or not a managed instance already exists, so the check has to be periodic rather than once. Default instance names read from the connector catalogue, since the id does not predict the name.
+- `pingone:terraform` - reconciling a duplicate instance, and telling console-created instances from Terraform-created ones by `customerId`. A PingOne collection endpoint returning 500 means one unserialisable row, not an outage.
+
 ## 0.1.3 - 2026-09-01
 
 - `pingone:davinci` - outcome routing. A node's declared outcome routes nowhere unless the edge leaving by it carries `multi_value_source_id`, and each outcome needs its own evaluator rather than a shared one. Both faults present as the connector logging success, no downstream node logging at all, and the client seeing `400 requestTimedOut`.
