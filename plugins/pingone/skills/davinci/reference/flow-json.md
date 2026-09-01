@@ -82,6 +82,16 @@ The Cytoscape boilerplate is not optional in practice, even where a schema marks
 
 `nodeType` is `CONNECTION` for a connector call and `EVAL` for a decision node with no connector. Some nodes carry blank connector fields; these are evaluator or visual helpers and still participate in edge routing.
 
+### Outcomes
+
+A node with more than one named exit declares them, and each must be claimed by an outgoing edge:
+
+```json
+"outcomes": [ { "id": "<edge id>", "label": "Log in", "result": "submit" } ]
+```
+
+All three fields are required by the `pingone` provider (`~> 1.21`). `id` is the **edge** the outcome leaves by, not the node — pair it with that edge's `multi_value_source_id`, below. An unclaimed outcome routes nowhere and the flow stops without an error.
+
 ## Edge
 
 ```json
@@ -89,7 +99,18 @@ The Cytoscape boilerplate is not optional in practice, even where a schema marks
   "group": "edges" }
 ```
 
-That is the whole edge. No conditions, no labels.
+An edge carries no conditions. It carries one routing field, and only when the source node needs it:
+
+```json
+{ "data": { "id": "…", "source": "…", "target": "…", "multi_value_source_id": "<outcome or option id>" },
+  "group": "edges" }
+```
+
+`multi_value_source_id` names **which exit of the source node** this edge leaves by. It is required on every edge leaving a node that has more than one named exit — a multi-select's options, or any node declaring `outcomes`. Omitting it routes the result nowhere, silently; see the SKILL's "Branching".
+
+**Spelling differs between an export and the Terraform provider.** A Studio export spells it `multiValueSourceId`; the `pingone` provider's edge schema spells it `multi_value_source_id`, like every other attribute it exposes. Carry the camelCase spelling into HCL and Terraform drops the field without comment, and every branch then leaves by the same exit.
+
+**The provider's edge has no `id` attribute.** `graph_data.elements.edges` is a map keyed by edge ID, and `edge.data` exposes `source`, `target` and `multi_value_source_id` only — so the map key *is* the identity, and an `outcomes` entry pointing at an edge must name that key.
 
 ## Variables
 
