@@ -27,6 +27,19 @@ The redirect page is itself a client-rendered widget, not server-rendered HTML. 
 - **Anything injected into `document.head` on the first screen persists across every later screen.** This is what lets one flow serve several brands or locales at runtime rather than deploying a flow per brand.
 - **Your HTML is inserted as a fragment.** A `<!DOCTYPE html>`, `<html>`, `<head>` or `<body>` wrapper in `customHTML` is ignored entirely, and a `<style>` block inside it has no effect. CSS belongs in the flow's `settings.css` with `use_custom_css` set, which is served as a page-level stylesheet at `/{envId}/davinci/flows/{flowId}/css`.
 
+### Driving the embedded surface with a Ping SDK
+
+The embedded row above is a client SDK driving the flow over JSON. Four things decide whether it works at all, and three of them fail silently.
+
+- **The OIDC client needs a CORS allow-list.** The SDK calls `/as/authorize` with `response_mode=pi.flow` **via `fetch`, from the host page's origin**, so an origin absent from the application's CORS settings cannot start a flow. A client created for a redirect journey has no such setting and needs one added before it can serve an embedded one.
+- **It only works in a browser.** Driving the same SDK from a server-side JavaScript runtime fails identically against a known-good flow and a broken one, so a failure there says nothing about the flow. Debug the embedded surface in a real browser; a headless probe of `/as/authorize` reads the raw response and tells you less than it appears to.
+- **The SDK builds its screen from a top-level `form.components.fields` on the response**, and from nothing else. Both the JavaScript and Android clients read that one path, so a response carrying its fields anywhere else produces zero collectors and an empty screen.
+- **`isResponseCompatibleWithMobileAndWebSdks` is not a renderability gate.** It appears on the **completed** response and never on a screen response, and no implementation file in the JavaScript client reads it at all — it occurs once, in a type declaration. Do not assert it against a screen; assert the field path above.
+
+The SDK returns **collectors**, not markup, and renders nothing: the application draws the controls and submits the values back.
+
+**A form field key round-trips asymmetrically.** A PingOne form field keyed `user.username` is authored dotted, submitted dotted by the SDK (`formData: {"user.username": …}`), and returned to the flow **nested** (`output.formData.user.username`). Bind downstream nodes against the nested path; a dotted binding resolves to nothing, which is silent.
+
 ## The graph model
 
 A flow is a Cytoscape graph under `graphData.elements`, with `nodes[]` and `edges[]`. The canvas fields (`position`, `selected`, `locked`, `grabbable`, `pannable`, `classes`) are not where behaviour lives. `node.data` and `edge.data` are.
@@ -42,7 +55,7 @@ The fields to read first on any node:
 | `data.nodeType` | `CONNECTION` for a connector call, `EVAL` for a decision node |
 | `data.properties` | Operation configuration. Most business logic lives here |
 
-**Edges do not carry branch conditions.** An edge is a link between node IDs and nothing more. Branching is expressed in the properties of the EVAL or connector node upstream of it. See "Branching" below.
+**An edge carries source, target and one routing field, and nothing else.** `edge.data` exposes `source`, `target` and `multi_value_source_id`; there is no `id` field, because an edge's identity is its key in the edges map. Conditions live in the upstream EVAL or connector node, not on the edge. `multi_value_source_id` is the exception and it is not a condition: it names **which exit of the source node** this edge leaves by, and it is required whenever the source node has more than one named exit. See "Branching" below.
 
 **Every node with no inbound edge is an entry point.** DaVinci starts the flow at all of them, not only the one you think of as the beginning, so there is no such thing as a disconnected node: an unwired node is a second start. An unwired terminal is the dangerous case. A `createSuccessResponse` with no inbound edge fires the moment the flow is entered and returns before any real work runs, so the caller receives an empty claim, every comparison downstream of it finds nothing to match and takes its default branch, and no screen renders.
 
@@ -114,9 +127,13 @@ A subflow returns through `httpConnector` / `createSuccessResponse`. A main flow
 
 ## Branching
 
-- **An EVAL names its branches by the target node's own ID**, with `value: "anyTriggersFalse"` marking the failure branch. There is no edge-level label anywhere.
+- **An EVAL names its branches by the target node's own ID**, with `value: "anyTriggersFalse"` marking the failure branch. An EVAL's branches carry no edge-level label; a node with named `outcomes` is the case that does, below.
 - **A `functionsConnector` node that throws is a real branching signal**, routed through the following EVAL's `anyTriggersFalse` branch.
 - **`AEqualsB` branches natively** through a following EVAL keyed the same way, so a computed condition does not have to throw in order to produce a graph branch.
+- **A node with declared `outcomes` needs its outgoing edge to claim one, via `multi_value_source_id`. Without it the flow stops dead, and the node's own log says it succeeded.** Set the edge's `multi_value_source_id` to the `id` of the outcome it serves. Miss it and the failure is silent in the worst place: the connector executes, returns `success: true` in a few milliseconds, and reports its result (`results: ["submit"]` for a form) — and then **no downstream node is logged at all**. The interaction sits until `flowHttpTimeoutSeconds` expires and the client receives `400` with `code: "requestTimedOut"` and a `CONSTRAINT_VIOLATION` reading "a capability took longer than allowed or the flow was misconfigured". Nothing timed out; the result had nowhere to go. Isolated over four deployed versions of one flow: no outcome and a plain edge, an outcome with a plain edge, and an outcome with the downstream bindings corrected all failed identically; adding `multi_value_source_id` completed the flow. **Treat "every declared outcome is claimed by exactly one outgoing edge" as a lint rule**, alongside the EVAL branch-key rule below.
+
+- **Each declared outcome needs an EVAL of its own. Several outcomes sharing one evaluator fail exactly like an unclaimed outcome does.** An EVAL resolves a single upstream result into a pass or a fail branch, so it cannot stand behind more than one exit of the same node: point three outcome edges at one evaluator and there are three results to reduce to one verdict, and the node routes nowhere. The client sees the same `400` / `requestTimedOut`, the node's own log again reports success, and again nothing downstream is logged. **The two faults are indistinguishable from the symptom**, so check both — every outcome claimed by exactly one edge, and every one of those edges landing on its own evaluator. Fixing whichever one is not the cause changes nothing observable, which is what makes the pair expensive. Convergence *after* the evaluators is fine and is usually what you want: three exits, three EVALs, all three edging into one shared next node. This is the shape the multi-select route edges already use, one EVAL per option; a node with named `outcomes` is the same rule. Confirmed live by adding two evaluators and changing nothing else — same outcome ids, same `multi_value_source_id` values, same result strings — turning a form node that timed out on two of its three exits into one that routes on all three.
+
 - **Rewiring a branch leaves the old branch key behind.** Studio does not clean up `properties` when an edge is repointed, so an EVAL's `properties` is not a reliable description of its branches. Treat "every EVAL branch key corresponds to a real outgoing edge" as a lint rule over generated and exported flows alike.
 
 ### Teleports
