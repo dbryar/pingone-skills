@@ -54,7 +54,7 @@ If a build generates flow JSON, derive the name from the connector id through th
 | --- | --- | --- |
 | `httpConnector` | `customHTMLTemplate` | Renders a screen. Content is a fragment. Form posts to `/davinci/connections/<connectionId>/capabilities/customHTMLTemplate` |
 | `httpConnector` | `createSuccessResponse` | A **subflow's** return. Wrong as a main flow's terminal |
-| `pingOneAuthenticationConnector` | `returnSuccessResponseRedirect` | A main flow's terminal. Establishes the session and issues the authorization code. Carries `properties.idleTimeout` |
+| `pingOneAuthenticationConnector` | `returnSuccessResponseRedirect` | A main flow's terminal. Establishes the session and issues the authorization code. Carries `properties.idleTimeout`, and the two independent claim lists `accessTokenClaims` and `idTokenClaims` |
 | `pingOneAuthenticationConnector` | `returnErrorResponseRedirect` | Refuses the request to the relying party. `errorCode`, `customErrorFlag: true` |
 | `pingOneAuthenticationConnector` | `checkSession` | Needs `checkSessionAuthenticator` plus a matching flow policy `trigger.configuration` window. `authenticationMethodLastUsedIn` is in **minutes** |
 | `pingOneSSOConnector` | `userLookup` | Supports `scimFilter` with `useCustomSCIMFilter`. A population-scoped filter combines an identifier attribute with `population.id eq "..."` |
@@ -81,3 +81,32 @@ The HMAC signing key lives on the connector instance as `hmacSigningKey`, not as
 ## Choosing a risk source
 
 `pingOneRiskConnector` exists. If a separate risk product supplies the sign-in decision, do not provision it: an unused connector instance is one more thing that must be kept configured, and its presence implies a decision that was not made.
+
+## `pingOneFormsConnector` — Form
+
+Renders a **PingOne form** as a screen, using the environment's own branding and theme. It is a `core`-category connector: `properties = null`, no environment credential, despite the name. Check `metadata.type` on `GET /v1/environments/{envId}/connectors/{connectorId}` before provisioning any connector — `core` needs no credential block, `ping` usually does.
+
+This is the connector an embedded SDK client can render; a `customHTMLTemplate` screen is an HTML document with no field structure and produces no collectors.
+
+### `showForm`
+
+```json
+{
+  "capabilityName": "showForm",
+  "connectorId": "pingOneFormsConnector",
+  "capabilityClass": "render",
+  "properties": {
+    "form":     { "value": "<form id>" },
+    "formData": { "value": [ { "key": "user.username", "value": "" },
+                             { "key": "user.password", "value": "" } ] },
+    "nodeTitle": { "value": "Sign On Form" },
+    "dynamicText": { "value": [] }
+  },
+  "outcomes": [ { "id": "<edge id>", "label": "Log in", "result": "submit" } ]
+}
+```
+
+- **The form is a PingOne resource, not flow content.** The node holds only its ID, which is environment-specific — generate it in rather than committing a literal.
+- **`formData` keys must exist as field keys on the referenced form.** A key that does not match binds to nothing and the flow JSON does not say so.
+- **One `submit` outcome per form**, claimed by its edge's `multi_value_source_id`. Branch after the form on what was submitted, not by the form offering several exits.
+- **The submitted value comes back nested.** A field keyed `user.username` returns as `output.formData.user.username`, though it is authored and submitted dotted.
