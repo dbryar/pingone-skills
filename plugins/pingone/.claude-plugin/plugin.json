@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "pingone",
   "displayName": "PingOne",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Skills for PingOne platform operations, DaVinci flow authoring, and Terraform/OpenTofu management of both. Built from findings confirmed against live tenants.",
   "author": {
     "name": "Daniel Bryar",

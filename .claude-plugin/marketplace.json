@@ -12,7 +12,7 @@
       "source": "./plugins/pingone",
       "displayName": "PingOne",
       "description": "Three skills covering PingOne platform operations, DaVinci flow authoring, and Terraform/OpenTofu management of both.",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "author": {
         "name": "Daniel Bryar",
         "url": "https://github.com/dbryar"
