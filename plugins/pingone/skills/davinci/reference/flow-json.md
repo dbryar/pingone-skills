@@ -154,6 +154,7 @@ Fields observed in real exports:
 - Treat `connectionId` and subflow IDs in an export as environment-local. They do not carry to another environment.
 - Preserve unknown fields on any round trip. DaVinci uses visual and internal metadata that has no meaning to your tooling and is still required.
 - Assert that every EVAL branch key names a node with a real outgoing edge. Studio leaves stale keys behind when a branch is repointed.
+- Assert that every `{{local.<nodeId>...}}` binding names a node present in the same graph. Claim rows and node properties pasted from another flow keep the source flow's node IDs, and nothing rejects them.
 - Assert that no placeholder token survives whatever substitution your pipeline does. A textual `replace()` that misses returns the string unchanged, applies cleanly, and fails at runtime.
 
 ## Subflow schemas

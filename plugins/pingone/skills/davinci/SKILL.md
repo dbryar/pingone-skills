@@ -57,6 +57,10 @@ The fields to read first on any node:
 
 **An edge carries source, target and one routing field, and nothing else.** `edge.data` exposes `source`, `target` and `multi_value_source_id`; there is no `id` field, because an edge's identity is its key in the edges map. Conditions live in the upstream EVAL or connector node, not on the edge. `multi_value_source_id` is the exception and it is not a condition: it names **which exit of the source node** this edge leaves by, and it is required whenever the source node has more than one named exit. See "Branching" below.
 
+**Every node with no inbound edge is an entry point.** DaVinci starts the flow at all of them, not only the one you think of as the beginning, so there is no such thing as a disconnected node: an unwired node is a second start. An unwired terminal is the dangerous case. A `createSuccessResponse` with no inbound edge fires the moment the flow is entered and returns before any real work runs, so the caller receives an empty claim, every comparison downstream of it finds nothing to match and takes its default branch, and no screen renders.
+
+**This fails silently and convincingly.** Nothing errors, the JSON is valid, and `terraform plan` and `apply` both succeed, so neither is evidence the flow works. The flow terminates on whichever default it fell through to, which is a real named outcome, so reading the redirect suggests a routing bug in a router that is behaving correctly. A flow should have exactly one node with no inbound edge, its genuine entry, plus any `startNode` teleport targets. Count them before committing a flow change, and make it a build-time error if you generate flows programmatically.
+
 **Never draw an edge directly from one `CONNECTION` node to another.** The target screen renders and its controls silently stop responding, with no error anywhere. Put an EVAL between them. Every transition in a working graph has one.
 
 **Node positions are not decoration.** Spacing encodes readability of the control flow: a connector and its EVAL bound tightly together, gates sharing a column so a cascade reads as an if/else-if chain, a default path set visibly further away than a gate outcome. If you generate flows programmatically, hold the layout explicitly and make a missing layout entry an error rather than defaulting a node to another node's position or to `(0,0)`. Nodes stacked at the origin still produce valid JSON that applies cleanly.
@@ -133,7 +137,7 @@ A subflow returns through `httpConnector` / `createSuccessResponse`. A main flow
 `nodeConnector`'s `goToNode` and `startNode` pair transfers control by reference rather than by edge:
 
 - `goToNode` carries only `nodeInstanceId` and has **no outgoing edge**.
-- `startNode` is a `type: "trigger"` named re-entry point and **needs no inbound edge to be reachable**.
+- `startNode` is a `type: "trigger"` named re-entry point and **needs no inbound edge to be reachable**. It is the only node type that legitimately has none; see "The graph model" for why any other unwired node runs on entry.
 
 This is the right tool for a shared destination reached from several places, and for a failure branch that must reach a specific screen rather than falling back to the last-rendered one. Using it means a shared "Success", "Error" or "No session" node can exist exactly once with no long edges dragged across the canvas to it. Sharing a destination and sharing a jump node are separate decisions; one `goToNode` can serve several nearby callers.
 
@@ -146,6 +150,37 @@ This is the right tool for a shared destination reached from several places, and
 | Subflow, success | `httpConnector` / `createSuccessResponse` |
 
 A main flow ending on `createSuccessResponse` returns plain JSON and never establishes a PingOne authentication session or issues an authorization code. It looks like it completed.
+
+### Custom claims on the success terminal
+
+`returnSuccessResponseRedirect` carries two independent claim lists in its `properties`: `accessTokenClaims` and `idTokenClaims`. Populating one does nothing to the other. A terminal holding a full profile on one and a single claim on the other is doing exactly that, not expressing an intent.
+
+Each list is a `{ "value": [ ... ] }` wrapper over rows:
+
+| Field | Meaning |
+| --- | --- |
+| `name` | The claim name that reaches the token |
+| `value` | A Slate JSON **string**, following the binding rules under "Property encoding" |
+| `type` | `string` or `object` |
+| `key` | Studio's row identifier, a float. Only has to be unique within its own list |
+| `label`, `nameDefault` | Studio's display text and the source field it last offered. Cosmetic |
+
+`label` and `nameDefault` drift from `name` as rows are edited and are never reconciled, so read `name` and `value` and ignore the other two. A row labelled `Email (string)` whose value binds something else entirely is a normal thing to find in a working flow.
+
+**Claim rows copied between flows keep their `{{local.<nodeId>...}}` bindings.** The node ID names a node in the flow they came from, which does not exist in the destination graph. Nothing validates this at any layer: the rows import, store, and serve unchanged, and the claim is built from a binding with nothing behind it. Repoint every `local.` reference in a pasted block at a node that actually runs on the branch reaching that terminal, and remember that a terminal reached from several branches only sees the nodes that ran on the branch actually taken. A terminal shared by an interactive branch and a token-exchange branch cannot source claims from a lookup that runs on only one of them.
+
+**Do not set `sub`.** OpenID Connect Core §5.3.2 requires a relying party to reject a `/userinfo` response whose `sub` does not match the id token's, and conformant client libraries do check. An id token `sub` overridden to a username or an email fails that comparison on every request, and the relying party reports a token or identity error that names nothing in the flow.
+
+### Which token gets the identity claims
+
+Default to identity claims in the id token and an access token carrying only what authorises the call. That is the split the protocol is built on: the id token is an identity assertion for the client, the access token is a credential presented to resource servers, and RFC 9068 §6 treats identity detail in an access token as a privacy exposure precisely because it is forwarded to every resource it is presented to. A client reading identity out of an access token is also parsing a value it is not, in general, entitled to parse.
+
+Two things to check before you strip the id token back:
+
+- If the client refreshes tokens and rebuilds its user from the new id token rather than re-calling `/userinfo`, identity claims that exist only on the access token leave the profile as bare `sub` after the first renewal.
+- Conversely, if the resource server cannot call `/userinfo` or introspect, the access token is the only place it can read.
+
+That second case is common in an estate with older services, and it is a legitimate reason to put identity claims on the access token. Do it deliberately: keep the set to what the resource server actually consumes, note why it is there, and do not carry the arrangement into a new flow by copying the terminal.
 
 ## Error handling, and a trap worth an entire debugging session
 

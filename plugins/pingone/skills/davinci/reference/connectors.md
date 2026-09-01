@@ -22,7 +22,7 @@ The connector instance write API does not validate property keys against the con
 | --- | --- | --- |
 | `httpConnector` | `customHTMLTemplate` | Renders a screen. Content is a fragment. Form posts to `/davinci/connections/<connectionId>/capabilities/customHTMLTemplate` |
 | `httpConnector` | `createSuccessResponse` | A **subflow's** return. Wrong as a main flow's terminal |
-| `pingOneAuthenticationConnector` | `returnSuccessResponseRedirect` | A main flow's terminal. Establishes the session and issues the authorization code. Carries `properties.idleTimeout` |
+| `pingOneAuthenticationConnector` | `returnSuccessResponseRedirect` | A main flow's terminal. Establishes the session and issues the authorization code. Carries `properties.idleTimeout`, and the two independent claim lists `accessTokenClaims` and `idTokenClaims` |
 | `pingOneAuthenticationConnector` | `returnErrorResponseRedirect` | Refuses the request to the relying party. `errorCode`, `customErrorFlag: true` |
 | `pingOneAuthenticationConnector` | `checkSession` | Needs `checkSessionAuthenticator` plus a matching flow policy `trigger.configuration` window. `authenticationMethodLastUsedIn` is in **minutes** |
 | `pingOneSSOConnector` | `userLookup` | Supports `scimFilter` with `useCustomSCIMFilter`. A population-scoped filter combines an identifier attribute with `population.id eq "..."` |
