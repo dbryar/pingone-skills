@@ -5,6 +5,11 @@
 - `pingone:terraform` - `pingone_form`. A form is a first-class PingOne object with its own lifecycle, not flow content, so a `showForm` node's form reference needs the same token substitution as `subFlowId` and fails the same silent way. Field positions, the `type` enum, directory-attribute field keys, Slate labels with their own language bundle, and the stock forms a new environment already has.
 - `pingone:davinci` - three field vocabularies disagree. The form builder authors 24 types, the JavaScript SDK collects 21, the Android SDK collects 14. A field outside the consuming SDK's set is dropped from the collector list rather than raising, so the screen renders looking complete and cannot be submitted.
 
+## 0.1.5 - 2026-09-01
+
+- `pingone:davinci` - a screen is painted once. Re-entering a `customHTMLTemplate` node does not replace the DOM or re-run `customScript`, so the error re-render's partial patch is one case of a general rule. `disabled` on an `skbutton` belongs to the widget and does not survive a submission round trip; gate with a class and a captured `click` listener instead.
+- `pingone:davinci` - a node's description is rendered inside the node, so its length is the node's height on the canvas. Company variables (`{{global.company.variables.<name>}}`) resolve inside a subflow and inside a screen's `customScript`, unlike `{{global.variables.<name>}}`.
+
 ## 0.1.4 - 2026-09-01
 
 - `pingone:davinci` - connector instances. Studio creates a duplicate the first time a connector is opened on a canvas, whether or not a managed instance already exists, so the check has to be periodic rather than once. Default instance names read from the connector catalogue, since the id does not predict the name.
