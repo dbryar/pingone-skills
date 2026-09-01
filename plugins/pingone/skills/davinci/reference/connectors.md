@@ -1,6 +1,6 @@
 # Connector and capability reference
 
-Confirmed in use rather than transcribed from a catalogue. A capability absent here is not necessarily unavailable; it is only not confirmed.
+Capabilities here are confirmed in use rather than transcribed from a catalogue: one absent is not necessarily unavailable, only not confirmed. The name and category table below is the exception, and is read straight from the catalogue endpoint.
 
 ## Two categories
 
@@ -15,6 +15,38 @@ Their `properties` shape is flat, and **the environment key is `envId`, not `env
 The connector instance write API does not validate property keys against the connector's schema. A wrong key is accepted, stored, and echoed back on every subsequent read, so the instance appears correctly configured and every capability call fails with an opaque `unexpectedError`. Verify keys, not just values.
 
 **Core-category connectors** (`httpConnector`, `functionsConnector`, `variablesConnector`, `codeSnippetConnector`, `errorConnector`, `nodeConnector`, `flowConnector`, `cookieConnector`, `userPolicyConnector`, `annotationConnector`) need no credential. Confirmed empirically for `httpConnector`; holds for the family.
+
+## Default instance names
+
+The name each connector's instance takes by default, and the name Studio gives the one it creates for you. Read from `GET /v1/environments/{envId}/connectors`, which returns `name` and `metadata.type` per connector and is the authority for any connector not listed here. `metadata.type` is the same field that decides which `properties` shape the instance needs, so one read answers both questions.
+
+Name a managed instance anything else and it becomes indistinguishable, in a list showing both, from a duplicate Studio made.
+
+| Connector | Default name | `metadata.type` |
+| --- | --- | --- |
+| `pingOneSSOConnector` | PingOne | `ping` |
+| `pingOneAuthenticationConnector` | PingOne Authentication | `ping` |
+| `pingOneMfaConnector` | PingOne MFA | `ping` |
+| `pingOneRiskConnector` | PingOne Protect | `ping` |
+| `notificationsConnector` | PingOne Notifications | `ping` |
+| `pingOneFormsConnector` | Form | `core` |
+| `httpConnector` | HTTP | `core` |
+| `functionsConnector` | Functions | `core` |
+| `variablesConnector` | Variable | `core` |
+| `codeSnippetConnector` | Code Snippet | `core` |
+| `errorConnector` | Error Message | `core` |
+| `nodeConnector` | Teleport | `core` |
+| `flowConnector` | Flow Conductor | `core` |
+| `cookieConnector` | Cookie | `core` |
+| `userPolicyConnector` | User Policy | `core` |
+| `analyticsConnector` | Flow Analytics | `core` |
+| `annotationConnector` | Annotation | `core` |
+| `challengeConnector` | Challenge | `core` |
+| `skUserPool` | User Pool | `core` |
+
+Four of these are worth reading twice, because the connector id does not predict the name and a plausible guess is wrong: `nodeConnector` is **Teleport**, `flowConnector` is **Flow Conductor**, `errorConnector` is **Error Message**, and `pingOneFormsConnector` is **Form** — `core`, despite the PingOne prefix, because its theming is applied PingOne-side at render rather than fetched on a credential of its own.
+
+If a build generates flow JSON, derive the name from the connector id through this table rather than spelling it at each node. Nothing at runtime binds on it — a node binds to its instance by `connectionId` — so a wrong name never fails, and left as free text per node it drifts without resistance.
 
 ## Capabilities in use
 
