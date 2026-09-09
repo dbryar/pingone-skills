@@ -11,15 +11,35 @@ Entries are added by `/pingone:learn`, which will not write one until the findin
 ```markdown
 ## YYYY-MM-DD - one-line summary
 
-**Skill:** core | davinci | terraform (or none)
+**Skill:** core | davinci | terraform | sdk (or none)
 **Confirmed by:** what was actually run or read
-**Versions:** pingcli x.y.z / provider x.y.z / n/a
+**Versions:** pingcli x.y.z / provider x.y.z / SDK x.y.z / n/a
 
 What was believed before, if anything, and what is true instead. What the failure looks like
 and whether it is silent. What changed in the skill files, or why nothing did.
 ```
 
 ---
+
+## 2026-09-09 - Ping's own published SDK skills are a minor version behind, in the direction that matters
+
+**Skill:** sdk
+**Confirmed by:** `@forgerock/davinci-client` 2.1.1's `collector.types.d.ts` and its implementation switch, read 02-09-2026; `com.pingidentity.sdks:davinci` 2.1.0's `CollectorRegistry`, read 31-08-2026; both against Ping Identity's `ping-sdk-agent-skills` at commit `f210a5c`, 31-07-2026.
+**Versions:** `@forgerock/davinci-client` 2.1.1 / `com.pingidentity.sdks:davinci` 2.1.0
+
+`pingone:sdk` was seeded from Ping's published agent skills rather than written from scratch, so the question of how far that material can be trusted was settled first rather than left implicit.
+
+Ping's skills state the JavaScript packages are at 2.0.0 and list fourteen collector types. At 2.1.1 the published catalogue is missing `BooleanCollector`, `ValidatedBooleanCollector`, `PollingCollector`, `RichTextCollector`, `ImageCollector`, `QrCodeCollector`, `SingleSelectObjectCollector`, `ObjectSelectCollector`, `PhoneNumberExtensionCollector` and `UnknownCollector`. On Android it lists the 1.2.0 registry of eleven collector categories; 2.1.0 registers fifteen, with `BOOLEAN`, `POLLING`, `QR_CODE` and `READ_ONLY_TEXT` added and none removed.
+
+The direction of the error is what makes it worth recording. A stale catalogue does not cause a build failure, it causes a field to be classified as unrecognised or dropped, and a dropped collector is invisible in the DOM and therefore invisible to any test that reads the DOM. So the vendor's own catalogue, taken as complete, produces exactly the silent failure this platform specialises in.
+
+Two further corrections to material inherited from the same source. Ping's catalogue names `CheckboxCollector` and `ErrorDisplayCollector`; neither exists at 2.1.1, where a checkbox is a `BooleanCollector` carrying an `appearance` and an error is `error: string | null` on every collector. And `BUTTON` and `SINGLE_SELECT` appear in the SDK's own `StandardField` type union with no case in the implementation, which is the general rule the skill now carries: read a vocabulary from the switch statement, never from the union.
+
+The skill records the import and its licence attribution openly, and states that a live finding beats the inherited material.
+
+The correction that followed is structural rather than a version bump. Ping publishes a maintained cross-SDK compatibility matrix at <https://developer.pingidentity.com/orchsdks/davinci/compatibility.html>, giving the collector class and originating SDK version per field for Android, iOS and JavaScript together. That is the authority for the vocabulary, and the skill links it instead of carrying a table, because any transcription is a snapshot of something that gains a row every minor release. What the skill keeps is what the matrix does not say: that an unsupported field is silently absent rather than an error, that collector class names diverge across platforms (`ReadOnlyTextCollector` against `ReadOnlyCollector`, `QRCodeCollector` against `QrCodeCollector`), and that a type union is not an implementation.
+
+Two findings arrived with it. `SKPolling` cannot be processed by any DaVinci client and must not appear in a flow, which makes Magic Link authentication incompatible with every SDK surface rather than one of them; it is a flow-level exclusion, so it never presents as a missing collector. And the matrix lists a `Translatable Rich Text` field collected as `LabelCollector` on Android and iOS, which is strong corroboration for the standing hypothesis that DaVinci rewrites a rich-text blob to `LABEL` on the way out. It is not confirmation: the matrix names fields as the form builder labels them, not by `type` enum value, so whether that field is `SLATE_TEXTBLOB` still wants one captured response.
 
 ## 2026-09-01 - A node's outcomes each need their own EVAL, not a shared one
 

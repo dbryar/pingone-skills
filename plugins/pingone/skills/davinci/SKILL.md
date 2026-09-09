@@ -7,7 +7,7 @@ description: Author, debug and deploy PingOne DaVinci flows - the flow JSON grap
 
 DaVinci flows fail quietly. Most of the findings below are cases where the flow applied cleanly, the API reported success, and the behaviour was wrong. That is the characteristic failure mode of this platform and it shapes how you should work in it: verify against a running flow, not against a schema.
 
-Companion skills: `pingone:core` for tenant operations, `pingone:terraform` for deploying flows as code.
+Companion skills: `pingone:core` for tenant operations, `pingone:terraform` for deploying flows as code, `pingone:sdk` for the client side of an embedded flow.
 
 ## Before anything else: which render mechanism
 
@@ -29,16 +29,14 @@ The redirect page is itself a client-rendered widget, not server-rendered HTML. 
 
 ### Driving the embedded surface with a Ping SDK
 
-The embedded row above is a client SDK driving the flow over JSON. Four things decide whether it works at all, and three of them fail silently.
+The embedded row above is a client SDK driving the flow over JSON. **That surface has its own skill: `pingone:sdk`.** It covers the collector model, what each client can render, how a PingOne Form constrains it, and branding a form the application draws itself.
 
-- **The OIDC client needs a CORS allow-list.** The SDK calls `/as/authorize` with `response_mode=pi.flow` **via `fetch`, from the host page's origin**, so an origin absent from the application's CORS settings cannot start a flow. A client created for a redirect journey has no such setting and needs one added before it can serve an embedded one.
-- **It only works in a browser.** Driving the same SDK from a server-side JavaScript runtime fails identically against a known-good flow and a broken one, so a failure there says nothing about the flow. Debug the embedded surface in a real browser; a headless probe of `/as/authorize` reads the raw response and tells you less than it appears to.
-- **The SDK builds its screen from a top-level `form.components.fields` on the response**, and from nothing else. Both the JavaScript and Android clients read that one path, so a response carrying its fields anywhere else produces zero collectors and an empty screen.
-- **`isResponseCompatibleWithMobileAndWebSdks` is not a renderability gate.** It appears on the **completed** response and never on a screen response, and no implementation file in the JavaScript client reads it at all — it occurs once, in a type declaration. Do not assert it against a screen; assert the field path above.
+Two of its consequences are flow-authoring concerns:
 
-The SDK returns **collectors**, not markup, and renders nothing: the application draws the controls and submits the values back.
+- **A screen response has to carry a top-level `form.components.fields`.** That is the only path either SDK builds collectors from, so it is what a generated flow must be asserted against. `isResponseCompatibleWithMobileAndWebSdks` is not the test: it appears on the completed response, never on a screen response, and no implementation reads it.
+- **A form field key round-trips asymmetrically.** A field keyed `user.username` is authored dotted, submitted dotted by the SDK (`formData: {"user.username": ...}`), and returned to the flow **nested** (`output.formData.user.username`). Bind downstream nodes against the nested path; a dotted binding resolves to nothing, which is silent.
 
-**A form field key round-trips asymmetrically.** A PingOne form field keyed `user.username` is authored dotted, submitted dotted by the SDK (`formData: {"user.username": …}`), and returned to the flow **nested** (`output.formData.user.username`). Bind downstream nodes against the nested path; a dotted binding resolves to nothing, which is silent.
+The SDK returns **collectors**, not markup, and renders nothing: the application draws the controls and submits the values back. Everything that follows from that is in `pingone:sdk`.
 
 ## The graph model
 

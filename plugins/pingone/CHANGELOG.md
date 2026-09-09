@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0 - 2026-09-09
+
+- `pingone:sdk` - new skill. The client side of an embedded DaVinci flow: the Ping Orchestration SDKs for web, Android and iOS, the collector vocabulary each one implements, the PingOne Form field types that produce those collectors, and applying a brand and locale to a form the application draws itself.
+  - The three-vocabulary rule. PingOne's form builder accepts 24 field types and each SDK collects a subset. An unsupported field does not error, it is absent from the collector list, so the screen renders looking complete and cannot be submitted. Author to the narrowest client that will render the form, and enforce it at generation time. Which fields each client collects is Ping's maintained compatibility matrix, linked rather than transcribed.
+  - Three constraints that are not field-level and so never present as a missing collector: `SKPolling` cannot be processed by any DaVinci client and rules out Magic Link authentication; images embedded in a Custom HTML Template are not processed; and `SLATE_TEXTBLOB` and `ERROR_DISPLAY` are in PingOne's stock sign-on form and in no SDK source.
+  - `Image` and `New Password` are web-only. A reset or registration form built on `New Password` completes in a browser and cannot be completed in an app.
+  - Read a vocabulary from the SDK's implementation, never from its published type union. `BUTTON` and `SINGLE_SELECT` are declared by the JavaScript client and implemented by neither.
+  - `FlowCollector` and `SubmitCollector` share `category: "ActionCollector"` and reach DaVinci by different calls (`flow({action})()` against `next()`). A dispatch keyed on category alone submits a named exit as a plain form submission, and the failure is silent because the re-rendered screen is identical either way.
+  - An `error` node still carries collectors, which is what every retry lane depends on. An error is a field on every collector rather than a collector of its own; `CheckboxCollector` and `ErrorDisplayCollector` are 1.2.0 names that do not exist in 2.1.1.
+  - Branding and localisation: resolve the brand once per client construction, make the partner input a schema-typed token file rather than a stylesheet so Compose and SwiftUI can consume it unchanged, reject per key and fall back per key, and treat a brand key with nothing published for it as the expected case.
+- `pingone:davinci` - the client-side half of "Driving the embedded surface with a Ping SDK" moves to `pingone:sdk`. The two flow-authoring facts stay: the `form.components.fields` assertion, and the dotted-in/nested-out form field key round trip.
+- `/pingone:learn` - routes findings to `sdk` as a fourth destination, and records an SDK version alongside pingcli and provider versions.
+
 ## 0.1.5 - 2026-09-01
 
 - `pingone:davinci` - a screen is painted once. Re-entering a `customHTMLTemplate` node does not replace the DOM or re-run `customScript`, so the error re-render's partial patch is one case of a general rule. `disabled` on an `skbutton` belongs to the widget and does not survive a submission round trip; gate with a class and a captured `click` listener instead.
