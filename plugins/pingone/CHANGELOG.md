@@ -11,7 +11,13 @@
   - An `error` node still carries collectors, which is what every retry lane depends on. An error is a field on every collector rather than a collector of its own; `CheckboxCollector` and `ErrorDisplayCollector` are 1.2.0 names that do not exist in 2.1.1.
   - Branding and localisation: resolve the brand once per client construction, make the partner input a schema-typed token file rather than a stylesheet so Compose and SwiftUI can consume it unchanged, reject per key and fall back per key, and treat a brand key with nothing published for it as the expected case.
 - `pingone:davinci` - the client-side half of "Driving the embedded surface with a Ping SDK" moves to `pingone:sdk`. The two flow-authoring facts stay: the `form.components.fields` assertion, and the dotted-in/nested-out form field key round trip.
+- `pingone:davinci` - the per-client field vocabularies added in 0.1.6 become a pointer. The constraint on how a form may be authored stays; the list of what each client collects moves to `pingone:sdk`, which links Ping's matrix. The Android list was 1.2.0-era and already stale at 2.1.0.
+- `pingone:terraform` - `pingone_form`'s vocabulary note points at both skills: `pingone:davinci` for why the constraint binds form authoring, `pingone:sdk` for which fields each client collects.
 - `/pingone:learn` - routes findings to `sdk` as a fourth destination, and records an SDK version alongside pingcli and provider versions.
+## 0.1.6 - 2026-09-01
+
+- `pingone:terraform` - `pingone_form`. A form is a first-class PingOne object with its own lifecycle, not flow content, so a `showForm` node's form reference needs the same token substitution as `subFlowId` and fails the same silent way. Field positions, the `type` enum, directory-attribute field keys, Slate labels with their own language bundle, and the stock forms a new environment already has.
+- `pingone:davinci` - three field vocabularies disagree. The form builder authors 24 types, the JavaScript SDK collects 21, the Android SDK collects 14. A field outside the consuming SDK's set is dropped from the collector list rather than raising, so the screen renders looking complete and cannot be submitted.
 
 ## 0.1.5 - 2026-09-01
 

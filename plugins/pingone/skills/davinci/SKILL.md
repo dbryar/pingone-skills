@@ -143,6 +143,16 @@ A subflow returns through `httpConnector` / `createSuccessResponse`. A main flow
 
 This is the right tool for a shared destination reached from several places, and for a failure branch that must reach a specific screen rather than falling back to the last-rendered one. Using it means a shared "Success", "Error" or "No session" node can exist exactly once with no long edges dragged across the canvas to it. Sharing a destination and sharing a jump node are separate decisions; one `goToNode` can serve several nearby callers.
 
+## Forms, and the vocabulary that actually renders
+
+A form is a PingOne object with its own ID, provisioned separately (see `pingone:terraform`'s `pingone_form`). A flow shows one through `pingOneFormsConnector`'s `showForm` capability, and the node carries only a reference to it. The node shape, its `formData` binding rules and its single `submit` outcome are in [`reference/connectors.md`](reference/connectors.md).
+
+**A form is the only screen a native or SDK-driven client can render.** Both the JavaScript and Android clients build their collectors from a top-level `form.components.fields` on the response and from nothing else, and a `customHTMLTemplate` screen is an HTML document with no field structure, so it produces no collectors and the client has nothing to draw. There is no flag to test for this: check that the screen node is a `showForm`. In particular `isResponseCompatibleWithMobileAndWebSdks` does not answer the question, for the reasons under "Driving the embedded surface with a Ping SDK".
+
+**Three vocabularies, and the narrowest one binds.** The form builder authors 24 field types and each client SDK collects a subset, so a form shown to more than one client has to be authored to the narrowest of them. **The failure is silent and looks like success**: a field the consuming SDK has no collector for is omitted from the collector list rather than raising, so the screen renders looking complete, cannot be submitted, and says nothing about why. A browser-based review of the same form passes, because the web vocabulary is the wider one.
+
+That constraint decides how a form may be authored, so it belongs here. Which fields each client actually collects belongs to the client, changes every minor SDK release, and is in `pingone:sdk`, which links Ping's own maintained matrix rather than carrying a copy. Do not transcribe a vocabulary into this file: a stale list is indistinguishable from a current one at the point of reading, and produces exactly the silent omission above.
+
 ## Terminals
 
 | Situation | Correct terminal |

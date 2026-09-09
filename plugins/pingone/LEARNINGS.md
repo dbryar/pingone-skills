@@ -39,6 +39,8 @@ The skill records the import and its licence attribution openly, and states that
 
 The correction that followed is structural rather than a version bump. Ping publishes a maintained cross-SDK compatibility matrix at <https://developer.pingidentity.com/orchsdks/davinci/compatibility.html>, giving the collector class and originating SDK version per field for Android, iOS and JavaScript together. That is the authority for the vocabulary, and the skill links it instead of carrying a table, because any transcription is a snapshot of something that gains a row every minor release. What the skill keeps is what the matrix does not say: that an unsupported field is silently absent rather than an error, that collector class names diverge across platforms (`ReadOnlyTextCollector` against `ReadOnlyCollector`, `QRCodeCollector` against `QrCodeCollector`), and that a type union is not an implementation.
 
+This supersedes the counts recorded on 27-08-2026, which were read from the SDKs then shipping: the JavaScript client collecting 21 field types and Android 14. Android 2.1.0 registers fifteen collector categories where 1.2.0 registered eleven, with none removed, so the fourteen-type list is 1.2.0-era and the seven-type gap it named has narrowed. The numbers were right when taken. That they went stale inside a fortnight is the argument for linking the matrix rather than restating it, and the `pingone:davinci` copy of the vocabulary was retired to a pointer for the same reason: the constraint on how a form may be authored stays there, the per-client list does not.
+
 Two findings arrived with it. `SKPolling` cannot be processed by any DaVinci client and must not appear in a flow, which makes Magic Link authentication incompatible with every SDK surface rather than one of them; it is a flow-level exclusion, so it never presents as a missing collector. And the matrix lists a `Translatable Rich Text` field collected as `LabelCollector` on Android and iOS, which is strong corroboration for the standing hypothesis that DaVinci rewrites a rich-text blob to `LABEL` on the way out. It is not confirmation: the matrix names fields as the form builder labels them, not by `type` enum value, so whether that field is `SLATE_TEXTBLOB` still wants one captured response.
 
 ## 2026-09-01 - A node's outcomes each need their own EVAL, not a shared one
@@ -193,6 +195,37 @@ Also added: a script-set `disabled` on an element carrying `data-skcomponent="sk
 Third, smaller: `{{global.company.variables.<name>}}` resolves inside a subflow, including inside a screen's `customScript`. The skill's subflow section warned only about `global.variables`, which left it open whether the company namespace was reachable from a subflow at all. Added one line next to that warning.
 
 Deliberately left out: the mechanism behind the `disabled` restoration. That the widget re-enables its buttons when a submission's response lands is the obvious reading and was not observed directly — what was observed is that a script-set value does not survive the round trip, which is what a reader needs either way.
+
+## 2026-08-27 - Forms are separate PingOne objects, and three field vocabularies disagree
+
+**Skill:** terraform (resource shape, form-ID substitution), davinci (showForm node, field vocabularies)
+**Confirmed by:** `tofu providers schema -json` for the `pingone_form` resource and its field `type` enum; a targeted `tofu plan` for a newly declared form; a real exported form and a real exported flow using seven `showForm` nodes; the JavaScript SDK's own field-to-collector switch; the Android SDK's `classes.jar` class list and the README bundled in its sources jar.
+**Versions:** `pingidentity/pingone` provider (schema read 27-08-2026) / `@forgerock/davinci-client` 2.1.1 / `com.pingidentity.sdks:davinci` 1.2.0
+
+Neither skill covered forms at all. A form turns out not to be flow content: it is a first-class
+PingOne object with its own ID and lifecycle, and a `showForm` node holds nothing but a reference
+to it in `properties.form.value`. Because `properties` is an opaque string, that reference needs
+the same token-and-`replace()` substitution the skill already documents for `subFlowId`, and it
+fails the same silent way, applying cleanly with a literal placeholder that neither `validate` nor
+`plan` can see.
+
+The finding with the most consequence is a three-way vocabulary mismatch. The form builder authors
+24 field types, the JavaScript SDK collects 21, and the Android SDK collects 14. A field outside
+the consuming SDK's set is **dropped from the node's collector list rather than raising**, so the
+screen renders looking complete, cannot be submitted, and gives no indication why. A browser-based
+review does not catch it, because the web vocabulary is the wider one. This is why the rule is to
+author to the narrowest consuming SDK at authoring time.
+
+Also recorded: a client SDK's published types are not a safe source for its vocabulary. The
+JavaScript SDK's `StandardField` union declares `BUTTON` and `SINGLE_SELECT`, and neither has a
+case in the code that builds collectors. The implementation is the authority.
+
+Deliberately not recorded: whether `SLATE_TEXTBLOB` and `ERROR_DISPLAY`, both present in PingOne's
+stock sign-on form and absent from both SDKs, are rewritten by DaVinci before a client sees them.
+`LABEL` is collectable by both SDKs and is not a form field type, which makes a `SLATE_TEXTBLOB` to
+`LABEL` rewrite the obvious explanation, but that is a hypothesis and no `showForm` response has
+been captured to settle it. Nothing about apply-time behaviour is recorded either; the form was
+planned, not applied.
 
 ## 2026-08-27 - a node with no inbound edge is an entry point, and an unwired terminal returns on load
 
