@@ -1,6 +1,6 @@
 # PingOne skills for Claude Code
 
-Three skills that give a coding agent working knowledge of PingOne, PingOne DaVinci, and the Terraform/OpenTofu providers that manage both.
+Four skills that give a coding agent working knowledge of PingOne, PingOne DaVinci, the Ping Orchestration SDKs that render an embedded flow, and the Terraform/OpenTofu providers that manage the first three.
 
 The contents are not a summary of the product documentation. They are the things that had to be found the hard way: the API errors that name the wrong cause, the resource attributes the schema marks optional and the API requires, and the several DaVinci behaviours that apply cleanly, report success, and do the wrong thing.
 
@@ -13,13 +13,14 @@ The contents are not a summary of the product documentation. They are the things
 
 If the install summary says `Run /reload-plugins to activate.`, run that.
 
-Once installed, three skills are available and Claude will load whichever fits the task:
+Once installed, four skills are available and Claude will load whichever fits the task:
 
 | Skill | Covers |
 | --- | --- |
 | `pingone:core` | The tenant. Environments and services, worker applications, roles and scopes, users and populations, MFA device pairing, licences, pingcli, the Management API |
 | `pingone:davinci` | Flow content. The graph model, node and connector shapes, variable contexts and bindings, subflow contracts, branching, error handling, and the HTML/CSS/JS of hosted login pages |
-| `pingone:terraform` | Both, as code. Provider resource shapes, using plan output to reconcile hand-made changes back into HCL, adopting existing resources, and the apply failure modes that leave orphans or silently stale content |
+| `pingone:sdk` | The client side. The Ping Orchestration SDKs for web, Android and iOS, the collectors each one can render, the PingOne Form field types that produce those collectors, and branding a login form the application draws itself |
+| `pingone:terraform` | All of it, as code. Provider resource shapes, using plan output to reconcile hand-made changes back into HCL, adopting existing resources, and the apply failure modes that leave orphans or silently stale content |
 
 You can also invoke one directly, for instance `/pingone:davinci`, when you want it loaded before describing the task.
 
@@ -28,6 +29,8 @@ You can also invoke one directly, for instance `/pingone:davinci`, when you want
 **`pingone:core`** answers "why did this API call fail". Its central rule is that PingOne reports a missing *service* on an environment as a permission error, so investigating roles first is usually a wasted hour. It also covers the pingcli authentication shape that works, which is not the one the documentation implies, and the field validation and device pairing quirks that have no published description.
 
 **`pingone:davinci`** answers "why does this flow behave differently from how it reads". Almost every entry is a silent failure: a subflow input bound the way it obviously should be, which compares against nothing forever; a session window in minutes sitting next to a cookie expiry in seconds; an error node that is a correct dead end in one position and kills the whole authorisation request in another. It also covers the working method these were found by, which matters more than any single entry.
+
+**`pingone:sdk`** answers "why is this field missing from the screen". Its central rule is that three vocabularies are in play and the narrowest wins: PingOne's form builder accepts 24 field types and each SDK collects a subset. A field outside a client's vocabulary does not error there, it is simply absent from the collector list, so the screen renders looking complete and cannot be submitted. Which fields each client collects is Ping's own maintained matrix, which the skill links rather than transcribes; what the skill adds is everything that matrix leaves unsaid, including the flow-level exclusions that never present as a missing collector at all. It also covers the branding and localisation problem the SDK vendors treat as out of scope, which it is not: one flow has to serve several brands and locales, and the application owns every pixel of the form.
 
 **`pingone:terraform`** answers two questions. What shape does this resource actually take, and how do I get the code and the live environment back into agreement.
 
@@ -68,6 +71,9 @@ pingone-skills/
         │   ├── davinci/
         │   │   ├── SKILL.md
         │   │   └── reference/    flow JSON shapes, connector catalogue
+        │   ├── sdk/
+        │   │   ├── SKILL.md
+        │   │   └── reference/    collector catalogue, client APIs, form field vocabulary
         │   └── terraform/
         │       ├── SKILL.md
         │       └── reference/    drift reconciliation commands
@@ -83,12 +89,14 @@ Each `SKILL.md` is the decision layer: what to do, and what will bite you. The `
 
 Deliberately general. Nothing here is specific to one tenant, organisation or estate, and findings are generalised before they are recorded. No environment IDs, client IDs, hostnames or organisation names appear anywhere in the repository, and `/pingone:learn` will not add them.
 
-Deliberately excluded: PingFederate, PingAccess, PingDirectory, PingID, and PingOne Advanced Identity Cloud. These skills cover PingOne and DaVinci only.
+Deliberately excluded: PingFederate, PingAccess, PingDirectory, PingID, and PingOne Advanced Identity Cloud. These skills cover PingOne and DaVinci only. That exclusion is also why `pingone:sdk` covers the DaVinci client and not the Journey client: Journey is callback-based authentication against PingAM or Advanced Identity Cloud, a different orchestration server.
 
 ## Versions
 
-Findings were confirmed against pingcli 1.3.0 and the `pingidentity/pingone` Terraform provider `~> 1.21`, except where an entry says otherwise. The DaVinci sections also describe the older, separate `davinci` provider where the two differ, because guidance written for one is actively wrong for the other.
+Findings were confirmed against pingcli 1.3.0, the `pingidentity/pingone` Terraform provider `~> 1.21`, `@forgerock/davinci-client` 2.1.1 and `com.pingidentity.sdks:davinci` 2.1.0, except where an entry says otherwise. The DaVinci sections also describe the older, separate `davinci` provider where the two differ, because guidance written for one is actively wrong for the other.
 
 ## Licence
 
 Apache License 2.0. See [LICENSE](LICENSE).
+
+Parts of `pingone:sdk`'s collector and client-API reference material were derived from Ping Identity's own [`ping-sdk-agent-skills`](https://github.com/pingidentity/ping-sdk-agent-skills), which is MIT licensed. That material is attributed in the skill and marked as unconfirmed against a running system; where it conflicts with a finding recorded here from live observation, the finding wins.

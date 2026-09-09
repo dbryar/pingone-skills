@@ -7,7 +7,7 @@ description: Author, debug and deploy PingOne DaVinci flows - the flow JSON grap
 
 DaVinci flows fail quietly. Most of the findings below are cases where the flow applied cleanly, the API reported success, and the behaviour was wrong. That is the characteristic failure mode of this platform and it shapes how you should work in it: verify against a running flow, not against a schema.
 
-Companion skills: `pingone:core` for tenant operations, `pingone:terraform` for deploying flows as code.
+Companion skills: `pingone:core` for tenant operations, `pingone:terraform` for deploying flows as code, `pingone:sdk` for the client side of an embedded flow.
 
 ## Before anything else: which render mechanism
 
@@ -29,16 +29,14 @@ The redirect page is itself a client-rendered widget, not server-rendered HTML. 
 
 ### Driving the embedded surface with a Ping SDK
 
-The embedded row above is a client SDK driving the flow over JSON. Four things decide whether it works at all, and three of them fail silently.
+The embedded row above is a client SDK driving the flow over JSON. **That surface has its own skill: `pingone:sdk`.** It covers the collector model, what each client can render, how a PingOne Form constrains it, and branding a form the application draws itself.
 
-- **The OIDC client needs a CORS allow-list.** The SDK calls `/as/authorize` with `response_mode=pi.flow` **via `fetch`, from the host page's origin**, so an origin absent from the application's CORS settings cannot start a flow. A client created for a redirect journey has no such setting and needs one added before it can serve an embedded one.
-- **It only works in a browser.** Driving the same SDK from a server-side JavaScript runtime fails identically against a known-good flow and a broken one, so a failure there says nothing about the flow. Debug the embedded surface in a real browser; a headless probe of `/as/authorize` reads the raw response and tells you less than it appears to.
-- **The SDK builds its screen from a top-level `form.components.fields` on the response**, and from nothing else. Both the JavaScript and Android clients read that one path, so a response carrying its fields anywhere else produces zero collectors and an empty screen.
-- **`isResponseCompatibleWithMobileAndWebSdks` is not a renderability gate.** It appears on the **completed** response and never on a screen response, and no implementation file in the JavaScript client reads it at all — it occurs once, in a type declaration. Do not assert it against a screen; assert the field path above.
+Two of its consequences are flow-authoring concerns:
 
-The SDK returns **collectors**, not markup, and renders nothing: the application draws the controls and submits the values back.
+- **A screen response has to carry a top-level `form.components.fields`.** That is the only path either SDK builds collectors from, so it is what a generated flow must be asserted against. `isResponseCompatibleWithMobileAndWebSdks` is not the test: it appears on the completed response, never on a screen response, and no implementation reads it.
+- **A form field key round-trips asymmetrically.** A field keyed `user.username` is authored dotted, submitted dotted by the SDK (`formData: {"user.username": ...}`), and returned to the flow **nested** (`output.formData.user.username`). Bind downstream nodes against the nested path; a dotted binding resolves to nothing, which is silent.
 
-**A form field key round-trips asymmetrically.** A PingOne form field keyed `user.username` is authored dotted, submitted dotted by the SDK (`formData: {"user.username": …}`), and returned to the flow **nested** (`output.formData.user.username`). Bind downstream nodes against the nested path; a dotted binding resolves to nothing, which is silent.
+The SDK returns **collectors**, not markup, and renders nothing: the application draws the controls and submits the values back. Everything that follows from that is in `pingone:sdk`.
 
 ## The graph model
 
@@ -151,11 +149,9 @@ A form is a PingOne object with its own ID, provisioned separately (see `pingone
 
 **A form is the only screen a native or SDK-driven client can render.** Both the JavaScript and Android clients build their collectors from a top-level `form.components.fields` on the response and from nothing else, and a `customHTMLTemplate` screen is an HTML document with no field structure, so it produces no collectors and the client has nothing to draw. There is no flag to test for this: check that the screen node is a `showForm`. In particular `isResponseCompatibleWithMobileAndWebSdks` does not answer the question, for the reasons under "Driving the embedded surface with a Ping SDK".
 
-**Three vocabularies, and the narrowest one binds.** The form builder authors 24 field types. The JavaScript client SDK implements collectors for 21. The Android SDK implements 14: `TEXT`, `PASSWORD`, `PASSWORD_VERIFY`, `SUBMIT_BUTTON`, `FLOW_BUTTON`, `FLOW_LINK`, `LABEL`, `COMBOBOX`, `CHECKBOX`, `DROPDOWN`, `RADIO`, `DEVICE_REGISTRATION`, `DEVICE_AUTHENTICATION`, `PHONE_NUMBER`. The seven it lacks are `SOCIAL_LOGIN_BUTTON`, `PROTECT`, `POLLING`, `AGREEMENT`, `IMAGE`, `REGISTER` and `SINGLE_CHECKBOX`.
+**Three vocabularies, and the narrowest one binds.** The form builder authors 24 field types and each client SDK collects a subset, so a form shown to more than one client has to be authored to the narrowest of them. **The failure is silent and looks like success**: a field the consuming SDK has no collector for is omitted from the collector list rather than raising, so the screen renders looking complete, cannot be submitted, and says nothing about why. A browser-based review of the same form passes, because the web vocabulary is the wider one.
 
-**The failure is silent and looks like success.** A field the SDK has no collector for is omitted from the node's collector list rather than raising, so the screen renders looking complete, cannot be submitted, and says nothing about why. A browser-based review of the same form passes, because the web SDK's vocabulary is wider. Author every shared form to the narrowest consuming SDK and check it at authoring time; there is nothing to catch it later.
-
-Read a client SDK's vocabulary from its implementation rather than its published types. The JavaScript SDK's own `StandardField` type union declares `BUTTON` and `SINGLE_SELECT`, and neither has a case in the code that maps fields to collectors.
+That constraint decides how a form may be authored, so it belongs here. Which fields each client actually collects belongs to the client, changes every minor SDK release, and is in `pingone:sdk`, which links Ping's own maintained matrix rather than carrying a copy. Do not transcribe a vocabulary into this file: a stale list is indistinguishable from a current one at the point of reading, and produces exactly the silent omission above.
 
 ## Terminals
 
