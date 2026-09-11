@@ -40,10 +40,10 @@ The DaVinci skill told readers to "read the DaVinci flow log" in two places and 
 ## 2026-09-11 - The PingOne remote MCP server: regional host, environment-local sign-in, and a silent empty tool list
 
 **Skill:** core (reference only)
-**Confirmed by:** DNS resolution of the candidate hosts; the server's protected-resource metadata read directly; a Claude Code debug log showing the connection with `hasTools: true` and no tools; the same server listing 77 tools immediately after a tenant-side setting was enabled, with no client change.
+**Confirmed by:** DNS resolution of the candidate hosts; the server's protected-resource metadata read directly; a Claude Code debug log showing the connection with `hasTools: true` and no tools; the same server listing 77 tools immediately after the environment was opted in to the PingOne Remote MCP Server early-access feature and MCP Access was enabled on its Settings > MCP Server page, with no client change. The permission model is the console's own statement on that page.
 **Versions:** Claude Code 2.1.268 / n/a
 
-The regional host takes the full root domain (`mcp.pingone.com.au`), not a short suffix; the short form does not resolve. The authorization server is the target environment's own, so sign-in needs a user in that environment rather than an administrator from the administrators environment. The empty tool list is the expensive one: every client-side signal says connected and authenticated, and reconnecting, re-authenticating and restarting change nothing. Recorded in `core/reference/execution-logs.md`; no `SKILL.md` rule changed beyond a pointer.
+The regional host takes the full root domain (`mcp.pingone.com.au`), not a short suffix; the short form does not resolve. The authorization server is the target environment's own, so sign-in needs a user in that environment rather than an administrator from the administrators environment. The empty tool list is the expensive one: every client-side signal says connected and authenticated, and reconnecting, re-authenticating and restarting change nothing. The fix is entirely in the admin console. Recorded in `core/reference/execution-logs.md`; no `SKILL.md` rule changed beyond a pointer.
 
 ## 2026-09-11 - `pingcli pingone api` takes the method as a flag, and unknown paths return 403
 

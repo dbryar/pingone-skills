@@ -26,13 +26,20 @@ Register one server per environment. The environment is part of the URL, so a se
 
 ### Who can sign in
 
-**The authorization server is the target environment's own, not the administrators environment.** The server's protected-resource metadata (`/.well-known/oauth-protected-resource/admin/<environmentId>/mcp`) names `https://auth.<root domain>/<environmentId>/as`. An administrator whose identity lives in the administrators environment cannot sign in through it. Create a user in the target environment and grant that user roles scoped to the environment. Environment Admin, DaVinci Admin and Identity Data Admin at environment scope were sufficient for the read tools; the minimum, and what the write tools need, has not been established.
+**The authorization server is the target environment's own, not the administrators environment.** The server's protected-resource metadata (`/.well-known/oauth-protected-resource/admin/<environmentId>/mcp`) names `https://auth.<root domain>/<environmentId>/as`. An administrator whose identity lives in the administrators environment cannot sign in through it. Create a user in the target environment and grant that user roles scoped to the environment. The console states that AI clients inherit the signed-in administrator's permissions and never grant additional access, so the tools can do exactly what that user's roles allow. Environment Admin, DaVinci Admin and Identity Data Admin at environment scope were sufficient for the read tools.
 
 The metadata advertises `scopes_supported: []` and the authorization request carries no `scope`. A client that requests no scope receives a working token, so there is nothing to add to the client configuration.
 
-### Connected but no tools
+### Turning it on
 
-**The server can connect, authenticate, report `hasTools: true`, and list zero tools, with no error anywhere.** The client shows the server as connected; its debug log shows the connection and then nothing for that server's tool fetch. Re-authenticating, reconnecting and restarting the client change nothing. The cause is on the PingOne side: the tools appeared, 77 of them, as soon as a setting was enabled in the tenant, with no client change. After enabling it, reconnect the server so the client re-reads the tool list; an already-running session keeps the empty list until then.
+The server is an early-access feature, enabled per environment in the admin console, in two steps:
+
+1. **Settings > Environment Properties > Manage Opt-Ins**: opt in to **PingOne Remote MCP Server**.
+2. **Settings > MCP Server**: enable **MCP Access**. The page lists the tool groups the server exposes and has its own Redirect URIs tab.
+
+**Until it is on, the server can connect, authenticate, report `hasTools: true`, and list zero tools, with no error anywhere.** The client shows the server as connected; its debug log shows the connection and then nothing for that server's tool fetch. Re-authenticating, reconnecting and restarting the client change nothing. Once it is on, reconnect the server so the client re-reads the tool list; an already-running session keeps the empty list until then. 77 tools were listed on 11-09-2026.
+
+With the opt-in enabled, the execution-log endpoints the MCP tools call are the same ones a worker with a client credentials token reads, which is the route for anything that cannot sign a person in. The worker route was confirmed on an environment with the opt-in enabled.
 
 ### Write access
 

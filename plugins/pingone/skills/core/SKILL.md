@@ -125,7 +125,7 @@ Keep a cookie jar across the whole sequence. Ad hoc `curl` calls that each start
 Two paths reach the same data:
 
 - The Management API directly, with any token that can read the environment's DaVinci configuration. Use this in tests and scripts.
-- The PingOne remote MCP server, which exposes the same reads as `listDavinciFlowExecutions` and `getDavinciFlowExecution`. Use this for interactive diagnosis from an agent. Setup and traps are in [`reference/execution-logs.md`](reference/execution-logs.md).
+- The PingOne remote MCP server, which exposes the same reads as `listDavinciFlowExecutions` and `getDavinciFlowExecution`. Use this for interactive diagnosis from an agent. It is an early-access feature that must be opted into and enabled per environment; setup and traps are in [`reference/execution-logs.md`](reference/execution-logs.md).
 
 ```bash
 # 1. Executions of one flow in a time window (SCIM filter; also accepts transactionId eq "...")
