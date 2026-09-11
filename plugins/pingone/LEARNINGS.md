@@ -11,7 +11,7 @@ Entries are added by `/pingone:learn`, which will not write one until the findin
 ```markdown
 ## YYYY-MM-DD - one-line summary
 
-**Skill:** core | davinci | terraform | sdk (or none)
+**Skill:** core | davinci | terraform | sdk | qa (or none)
 **Confirmed by:** what was actually run or read
 **Versions:** pingcli x.y.z / provider x.y.z / SDK x.y.z / n/a
 
@@ -20,6 +20,14 @@ and whether it is silent. What changed in the skill files, or why nothing did.
 ```
 
 ---
+
+## 2026-09-11 - A read-only credential reads execution logs; `pingone:qa` added
+
+**Skill:** qa
+**Confirmed by:** a worker holding only `DaVinci Admin Read Only` at environment scope: `200` on a flow's execution listing and on an execution's events; `403` on `DELETE` of a nonexistent flow and on `POST` to `variables`, where a worker holding DaVinci Admin got `404` and `400` on the same calls. The role's permission list read back from the API: 28 permissions, all reads, including `davinci:read:interactionEvents` and `davinci:read:dvFlows`. A journey test asserting milestones from the log passed on a real run and failed, with the expected report, when the same run was checked against the enrolment path. The harness traps are each recorded in the test harness that found them, where a broken flow had passed: a click helper that matched nothing, an OTP read that returned the previous run's code (twice), a leftover session routing a first login as a returning one.
+**Versions:** n/a
+
+`pingone:qa` is new. It holds testing method rather than platform behaviour, so the platform facts it depends on stay in `core` and `davinci` and it points at them. What it states as fact: the success response's `interactionId` is the execution's `id`; a comparison node's false branch logs `success: "false"`; a node can log two `Send Response` events and a form one per render; and the read-only role above. Nothing was corrected.
 
 ## 2026-09-11 - Flow execution logs are readable per event, and subflows log under their own interaction
 

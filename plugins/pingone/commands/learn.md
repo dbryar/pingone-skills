@@ -53,6 +53,7 @@ Which skill:
 - `core` for the tenant: environments, services, roles and scopes, users, populations, MFA devices, licences, pingcli, the Management API.
 - `davinci` for flow content: the graph, nodes, connectors, variables, bindings, subflows, branching, the hosted page's HTML/CSS/JS.
 - `terraform` for the providers: resource shapes, plan and drift reconciliation, import and adoption, apply failure modes.
+- `qa` for testing and diagnosing journeys: execution logs as a test oracle, path assertions, test credentials, harness traps.
 - `sdk` for the client side of an embedded flow: the Ping Orchestration SDKs, collectors, PingOne Form field vocabularies, client-side branding and localisation.
 
 A finding that spans two skills goes in the one whose reader will hit it, with a one-line pointer from the other. Do not duplicate the full text; duplicated rules drift apart and then contradict each other.
@@ -74,7 +75,7 @@ Then prepend an entry to `LEARNINGS.md`, newest first:
 ```markdown
 ## YYYY-MM-DD - one-line summary
 
-**Skill:** core | davinci | terraform | sdk (or none)
+**Skill:** core | davinci | terraform | sdk | qa (or none)
 **Confirmed by:** what was actually run or read
 **Versions:** pingcli x.y.z / provider x.y.z / SDK x.y.z / n/a
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0 - 2026-09-11
+
+- `pingone:qa` - new skill. Testing DaVinci journeys with the flow's execution log as the oracle: take the run's `interactionId` from its own success response, follow it into subflows by `transactionId`, assert ordered milestones and forbidden nodes per flow rather than the whole path, and report every flow's completed path and the last node's inputs and output on failure. Reading the log: collapse repeated `Send Response` events, `success: "false"` on a comparison is a branch not a failure, and a `next` link does not mean more events. A read-only suite credential (`DaVinci Admin Read Only` reads the logs and is refused writes), with missing, refused and late reads all failing loudly. Harness traps that let a broken journey pass: a click that matches nothing, an OTP read that races the send, a leftover session, the lockout policy.
+- `/pingone:learn` - routes findings to `qa` as a fifth destination.
+
 ## 0.2.1 - 2026-09-11
 
 - `pingone:core` - "Observing flow executions". Every DaVinci execution is readable event by event from `GET /environments/{envId}/flows/{flowId}/interactions` and its `/events`, or through the PingOne remote MCP server. A subflow logs under its own `interactionId`, linked to the parent by `transactionId`; asking for it under the parent's returns `404`.
