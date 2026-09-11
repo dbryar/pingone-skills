@@ -33,25 +33,31 @@ pingcli pingone applications list --environment-id "$ENV" \
 
 `pingcli pingone api` issues an authenticated call against any Management API path. This is the escape hatch for everything the typed subcommands do not cover, and it is where most real diagnostic work happens.
 
+It takes exactly one positional argument, the path. The method is a flag, and it defaults to `GET`. Passing the method positionally, as `pingcli pingone api GET <path>`, fails with "command accepts 1 arg(s), received 2". Inline JSON goes in `--data-raw`; `--data` takes a file path. Confirmed on pingcli 1.4.0.
+
 ```bash
-pingcli pingone api GET "/environments/$ENV/users/$USER_ID/devices"
+pingcli pingone api "environments/$ENV/users/$USER_ID/devices"
 
-pingcli pingone api POST "/environments/$ENV/users/$USER_ID/devices" \
-  --data '{"type": "SMS", "phone": "+61400000000"}'
+pingcli pingone api --http-method POST "environments/$ENV/users/$USER_ID/devices" \
+  --data-raw '{"type": "SMS", "phone": "+61400000000"}'
 
-pingcli pingone api PATCH "/environments/$ENV/users/$USER_ID" \
-  --data '{"mobilePhone": "+61400000000"}'
+pingcli pingone api --http-method PATCH "environments/$ENV/users/$USER_ID" \
+  --data-raw '{"mobilePhone": "+61400000000"}'
 
-pingcli pingone api DELETE "/environments/$ENV/deviceAuthenticationPolicies/$POLICY_ID"
+pingcli pingone api --http-method DELETE "environments/$ENV/deviceAuthenticationPolicies/$POLICY_ID"
 ```
+
+Add `--output-format json` to get the response wrapped in an envelope with `status`, `data` and `errors`, which is the easiest form to parse from a script.
 
 Content-type sensitive calls need the header set explicitly. TOTP device activation is the common case:
 
 ```bash
-pingcli pingone api POST "/environments/$ENV/users/$USER_ID/devices/$DEVICE_ID" \
+pingcli pingone api --http-method POST "environments/$ENV/users/$USER_ID/devices/$DEVICE_ID" \
   --header "Content-Type: application/vnd.pingidentity.device.activate+json" \
-  --data '{"otp": "123456"}'
+  --data-raw '{"otp": "123456"}'
 ```
+
+**A path that does not exist returns HTTP `403` with "Invalid key=value pair (missing equal-sign) in Authorization header"**, not `404`. It reads as a credential problem. It is a typo. A real path under the same prefix, with the same token, succeeds.
 
 ## Common commands
 

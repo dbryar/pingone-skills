@@ -19,6 +19,7 @@ Once installed, four skills are available and Claude will load whichever fits th
 | --- | --- |
 | `pingone:core` | The tenant. Environments and services, worker applications, roles and scopes, users and populations, MFA device pairing, licences, pingcli, the Management API |
 | `pingone:davinci` | Flow content. The graph model, node and connector shapes, variable contexts and bindings, subflow contracts, branching, error handling, and the HTML/CSS/JS of hosted login pages |
+| `pingone:qa` | Testing journeys. The flow's execution log as the test oracle, path assertions across subflows, log-first defect triage, the read-only credential a suite uses, and the harness traps that make a broken journey pass |
 | `pingone:sdk` | The client side. The Ping Orchestration SDKs for web, Android and iOS, the collectors each one can render, the PingOne Form field types that produce those collectors, and branding a login form the application draws itself |
 | `pingone:terraform` | All of it, as code. Provider resource shapes, using plan output to reconcile hand-made changes back into HCL, adopting existing resources, and the apply failure modes that leave orphans or silently stale content |
 
@@ -29,6 +30,8 @@ You can also invoke one directly, for instance `/pingone:davinci`, when you want
 **`pingone:core`** answers "why did this API call fail". Its central rule is that PingOne reports a missing *service* on an environment as a permission error, so investigating roles first is usually a wasted hour. It also covers the pingcli authentication shape that works, which is not the one the documentation implies, and the field validation and device pairing quirks that have no published description.
 
 **`pingone:davinci`** answers "why does this flow behave differently from how it reads". Almost every entry is a silent failure: a subflow input bound the way it obviously should be, which compares against nothing forever; a session window in minutes sitting next to a cookie expiry in seconds; an error node that is a correct dead end in one position and kills the whole authorisation request in another. It also covers the working method these were found by, which matters more than any single entry.
+
+**`pingone:qa`** answers "did the login actually take the path the test says it did". Its central rule is that what a client rendered is not evidence of which branch a flow took; the execution log is, so a journey test reads that run's log, follows it into its subflows, and asserts ordered milestones. It also covers where a failing run stopped, reading the log with a credential that cannot write, and the harness mistakes that make a broken flow pass.
 
 **`pingone:sdk`** answers "why is this field missing from the screen". Its central rule is that three vocabularies are in play and the narrowest wins: PingOne's form builder accepts 24 field types and each SDK collects a subset. A field outside a client's vocabulary does not error there, it is simply absent from the collector list, so the screen renders looking complete and cannot be submitted. Which fields each client collects is Ping's own maintained matrix, which the skill links rather than transcribes; what the skill adds is everything that matrix leaves unsaid, including the flow-level exclusions that never present as a missing collector at all. It also covers the branding and localisation problem the SDK vendors treat as out of scope, which it is not: one flow has to serve several brands and locales, and the application owns every pixel of the form.
 
@@ -71,6 +74,8 @@ pingone-skills/
         │   ├── davinci/
         │   │   ├── SKILL.md
         │   │   └── reference/    flow JSON shapes, connector catalogue
+        │   ├── qa/
+        │   │   └── SKILL.md
         │   ├── sdk/
         │   │   ├── SKILL.md
         │   │   └── reference/    collector catalogue, client APIs, form field vocabulary

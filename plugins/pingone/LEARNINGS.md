@@ -11,7 +11,7 @@ Entries are added by `/pingone:learn`, which will not write one until the findin
 ```markdown
 ## YYYY-MM-DD - one-line summary
 
-**Skill:** core | davinci | terraform | sdk (or none)
+**Skill:** core | davinci | terraform | sdk | qa (or none)
 **Confirmed by:** what was actually run or read
 **Versions:** pingcli x.y.z / provider x.y.z / SDK x.y.z / n/a
 
@@ -20,6 +20,38 @@ and whether it is silent. What changed in the skill files, or why nothing did.
 ```
 
 ---
+
+## 2026-09-11 - A read-only credential reads execution logs; `pingone:qa` added
+
+**Skill:** qa
+**Confirmed by:** a worker holding only `DaVinci Admin Read Only` at environment scope: `200` on a flow's execution listing and on an execution's events; `403` on `DELETE` of a nonexistent flow and on `POST` to `variables`, where a worker holding DaVinci Admin got `404` and `400` on the same calls. The role's permission list read back from the API: 28 permissions, all reads, including `davinci:read:interactionEvents` and `davinci:read:dvFlows`. A journey test asserting milestones from the log passed on a real run and failed, with the expected report, when the same run was checked against the enrolment path. The harness traps are each recorded in the test harness that found them, where a broken flow had passed: a click helper that matched nothing, an OTP read that returned the previous run's code (twice), a leftover session routing a first login as a returning one.
+**Versions:** n/a
+
+`pingone:qa` is new. It holds testing method rather than platform behaviour, so the platform facts it depends on stay in `core` and `davinci` and it points at them. What it states as fact: the success response's `interactionId` is the execution's `id`; a comparison node's false branch logs `success: "false"`; a node can log two `Send Response` events and a form one per render; and the read-only role above. Nothing was corrected.
+
+## 2026-09-11 - Flow execution logs are readable per event, and subflows log under their own interaction
+
+**Skill:** core, with pointers from davinci
+**Confirmed by:** one embedded sign-in with an SMS challenge, driven end to end, then its executions read back both through the PingOne remote MCP server (`listDavinciFlowExecutions`, `getDavinciFlowExecution`) and directly through `pingcli pingone api` against `GET /environments/{envId}/flows/{flowId}/interactions` and `.../interactions/{interactionId}/events`. The `interactionId` in the client's success response matched the listed execution. Subflow lookup by the parent's `interactionId` returned `404`; lookup by `transactionId eq` returned the subflow execution with `isSubFlow: true`; a made-up `transactionId` returned zero, as a control. Read with a worker holding Organization Admin, Environment Admin and DaVinci Admin, so the minimum role is not established.
+**Versions:** pingcli 1.4.0 / n/a
+
+The DaVinci skill told readers to "read the DaVinci flow log" in two places and nowhere said how. Core now carries the recipe. The trap is the subflow: its events are not under the parent's `interactionId`, and the `404` that returns reads as "no log was kept". The parent's `startUiSubFlow` event names the subflow actually run in `properties.subFlowId`, which in the confirming run was not the subflow the node title suggested. A `next` link was present on a page shorter than the requested limit, so the skill does not tell readers to page until it disappears.
+
+## 2026-09-11 - The PingOne remote MCP server: regional host, environment-local sign-in, and a silent empty tool list
+
+**Skill:** core (reference only)
+**Confirmed by:** DNS resolution of the candidate hosts; the server's protected-resource metadata read directly; a Claude Code debug log showing the connection with `hasTools: true` and no tools; the same server listing 77 tools immediately after the environment was opted in to the PingOne Remote MCP Server early-access feature and MCP Access was enabled on its Settings > MCP Server page, with no client change. The permission model is the console's own statement on that page.
+**Versions:** Claude Code 2.1.268 / n/a
+
+The regional host takes the full root domain (`mcp.pingone.com.au`), not a short suffix; the short form does not resolve. The authorization server is the target environment's own, so sign-in needs a user in that environment rather than an administrator from the administrators environment. The empty tool list is the expensive one: every client-side signal says connected and authenticated, and reconnecting, re-authenticating and restarting change nothing. The fix is entirely in the admin console. Recorded in `core/reference/execution-logs.md`; no `SKILL.md` rule changed beyond a pointer.
+
+## 2026-09-11 - `pingcli pingone api` takes the method as a flag, and unknown paths return 403
+
+**Skill:** core
+**Confirmed by:** `pingcli pingone api GET <path>` failing with "command accepts 1 arg(s), received 2"; `pingcli pingone api --help`; a nonexistent path under a working prefix returning `403` "Invalid key=value pair (missing equal-sign) in Authorization header" while a sibling real path with the same token succeeded.
+**Versions:** pingcli 1.4.0
+
+`reference/pingcli.md` showed the method as a positional argument and inline JSON in `--data`. At 1.4.0 the method is `--http-method`, `--data` takes a file, and inline JSON goes in `--data-raw`. The examples were rewritten in place. The `403` on an unknown path is loud but misleading: it names the Authorization header, so it reads as a credential or role problem. Added to core's error vocabulary.
 
 ## 2026-09-09 - Ping's own published SDK skills are a minor version behind, in the direction that matters
 
