@@ -203,7 +203,7 @@ That second case is common in an estate with older services, and it is a legitim
 
 Treat "no `customErrorMessage` node is reachable before a screen has rendered" as a precondition on any flow that calls a subflow or checks a session before its first screen. A branch in that position must rejoin the routing decision through a waypoint instead of terminating.
 
-**When a flow dies, PingOne reports `login_required` to the relying party, with the same generic `error_description` a legitimately refused silent authentication produces.** Two completely different causes produce byte-identical text at the relying party. Never conclude anything from that text. Read DaVinci's own flow log, where a dead flow shows as `id: "subflowFailed"` with an `err.code`.
+**When a flow dies, PingOne reports `login_required` to the relying party, with the same generic `error_description` a legitimately refused silent authentication produces.** Two completely different causes produce byte-identical text at the relying party. Never conclude anything from that text. Read DaVinci's own flow log, where a dead flow shows as `id: "subflowFailed"` with an `err.code`. How to read that log, including following a run into its subflows, is in `pingone:core` under "Observing flow executions".
 
 ### The native error display
 
@@ -246,7 +246,7 @@ The findings above were not derived from documentation. They came from deploying
 
 1. **Ground new node shapes against a real working export** before authoring them. A capability invented from a plausible reading of the schema will apply cleanly and do nothing.
 2. **Verify against a real rendered page**, not against the API accepting the deploy. A green deploy proves nothing about behaviour, branding, or whether a button responds to a click.
-3. **When something opaque fails, get evidence rather than reasoning further.** Inspect the live node through the API, dump the page's state through the browser's debug protocol, read the DaVinci flow log. Opaque connector and session failures here have a history of surviving two rounds of schema-based reasoning and yielding immediately to one direct observation.
+3. **When something opaque fails, get evidence rather than reasoning further.** Inspect the live node through the API, dump the page's state through the browser's debug protocol, read the DaVinci flow log (see `pingone:core`, "Observing flow executions"). Opaque connector and session failures here have a history of surviving two rounds of schema-based reasoning and yielding immediately to one direct observation.
 4. **Keep a control case.** "Silent authentication does not work" means nothing until the interactive request through the same flow, same session, same client is shown to work.
 
 ## Anti-pattern: the Studio export as source of truth

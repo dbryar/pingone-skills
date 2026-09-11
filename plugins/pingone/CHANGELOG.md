@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 - 2026-09-11
+
+- `pingone:core` - "Observing flow executions". Every DaVinci execution is readable event by event from `GET /environments/{envId}/flows/{flowId}/interactions` and its `/events`, or through the PingOne remote MCP server. A subflow logs under its own `interactionId`, linked to the parent by `transactionId`; asking for it under the parent's returns `404`.
+- `pingone:core` - `reference/execution-logs.md`. The PingOne remote MCP server: the regional host takes the full root domain, sign-in goes through the target environment's own authorization server, and the server can connect with an empty tool list and no error until a tenant-side setting is enabled. The event log's shape.
+- `pingone:core` - `pingcli pingone api` examples corrected for 1.4.0: method as `--http-method`, inline JSON as `--data-raw`. A nonexistent path returns `403` naming the Authorization header; added to the error vocabulary.
+- `pingone:davinci` - "read the DaVinci flow log" now points at the core recipe.
+
 ## 0.2.0 - 2026-09-09
 
 - `pingone:sdk` - new skill. The client side of an embedded DaVinci flow: the Ping Orchestration SDKs for web, Android and iOS, the collector vocabulary each one implements, the PingOne Form field types that produce those collectors, and applying a brand and locale to a form the application draws itself.

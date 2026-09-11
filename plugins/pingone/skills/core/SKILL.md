@@ -118,6 +118,35 @@ Keep a cookie jar across the whole sequence. Ad hoc `curl` calls that each start
 
 **Respect the lockout policy when probing.** Environments commonly lock at five failed attempts per fifteen minutes. Debugging a credential problem by repeated login attempts turns a diagnosable problem into a locked account plus a wait.
 
+## Observing flow executions
+
+**Every DaVinci execution is readable after the fact, event by event, from the Management API.** This is the primary evidence for any flow defect and the proof of any flow path a test claims to have taken. Read it before reasoning about why a flow did what it did.
+
+Two paths reach the same data:
+
+- The Management API directly, with any token that can read the environment's DaVinci configuration. Use this in tests and scripts.
+- The PingOne remote MCP server, which exposes the same reads as `listDavinciFlowExecutions` and `getDavinciFlowExecution`. Use this for interactive diagnosis from an agent. Setup and traps are in [`reference/execution-logs.md`](reference/execution-logs.md).
+
+```bash
+# 1. Executions of one flow in a time window (SCIM filter; also accepts transactionId eq "...")
+pingcli pingone api --output-format json \
+  "environments/$ENV/flows/$FLOW_ID/interactions?filter=<url-encoded filter>&limit=50"
+
+# 2. The event log of one execution
+pingcli pingone api --output-format json \
+  "environments/$ENV/flows/$FLOW_ID/interactions/$INTERACTION_ID/events?limit=500"
+```
+
+The `interactionId` a main flow returns to the client on success is the execution's `id`, so a test that captures it can go straight to step 2.
+
+**A subflow runs as a separate execution with its own `interactionId`.** Asking for the subflow's events under the parent's `interactionId` returns `404 NOT_FOUND`, which reads as "no log was kept" and is not. To follow a run into its subflows:
+
+1. Read the parent's `startUiSubFlow` event. `properties.subFlowId.value.value` is the flow that actually ran, which is not necessarily the one the node's title suggests.
+2. Take the parent execution's `transactionId` from step 1's listing. Parent and subflow executions share it.
+3. List that subflow's executions filtered on `transactionId eq "<id>"`. The match carries `isSubFlow: true`.
+
+Each event carries `nodeTitle`, `connector.id`, `capabilityName`, `success`, `executionTime` in milliseconds, and `properties` holding the node's resolved inputs and outputs. Password inputs come back masked. A single login with one MFA challenge produced roughly 40 parent events and 50 subflow events, 60 KB to 80 KB of JSON each, so parse the log with a script rather than reading it whole. The response carried a `next` link even on a page shorter than the requested limit, so its presence alone does not mean more events exist.
+
 ## Error vocabulary
 
 | Code | Usual meaning | First thing to check |
@@ -127,6 +156,7 @@ Keep a cookie jar across the whole sequence. Ad hoc `curl` calls that each start
 | `INVALID_DATA` | Field validation | Restricted characters in a description; wrong body shape |
 | `UNIQUENESS_VIOLATION` | An object with that name already exists | An orphan left by a failed create. See `pingone:terraform` |
 | `unexpectedError` (DaVinci) | Opaque server-side failure | Almost never diagnosable from the message. See `pingone:davinci` |
+| HTTP `403`, "Invalid key=value pair (missing equal-sign) in Authorization header" | The path does not exist. Not a permission failure | The path spelling against the API reference, before touching roles |
 
 ## Environment limits
 
@@ -137,6 +167,7 @@ Keep a cookie jar across the whole sequence. Ad hoc `curl` calls that each start
 
 - [`reference/pingcli.md`](reference/pingcli.md) - command catalogue, output shaping with `-O json --query`, raw API passthrough.
 - [`reference/permissions.md`](reference/permissions.md) - role catalogue, scope model, and the worker application shapes that work.
+- [`reference/execution-logs.md`](reference/execution-logs.md) - the PingOne remote MCP server's setup, and the shape of a flow execution's event log.
 
 ## Correcting this skill
 
