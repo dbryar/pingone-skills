@@ -68,7 +68,7 @@ If a build generates flow JSON, derive the name from the connector id through th
 | `nodeConnector` | `startNode` | `type: "trigger"` re-entry point. Needs no inbound edge |
 | `flowConnector` | `startSubFlow` / `startUiSubFlow` | Target named in `properties.subFlowId`. `subFlowVersionId: -1` means latest **deployed** version |
 | `cookieConnector` | `checkSessionCookieWithoutUser` | Reads a named cookie. `enforceFlowIdMatch: false` lets one flow read a cookie written by another |
-| `cookieConnector` | (write capabilities) | `hmacSigningKey` is a connector-instance property. `cookieExpiresInSeconds` is in **seconds** |
+| `cookieConnector` | (write capabilities) | `hmacSigningKey` is a connector-instance property. `cookieExpiresInSeconds` is in **seconds**. Unreachable on a `prompt=none` branch: see SKILL.md, "Terminals" |
 
 ## Cookie connector properties
 
