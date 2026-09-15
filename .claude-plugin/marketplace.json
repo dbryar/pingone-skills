@@ -12,7 +12,7 @@
       "source": "./plugins/pingone",
       "displayName": "PingOne",
       "description": "Five skills covering PingOne platform operations, DaVinci flow authoring, the client SDKs that render an embedded flow, end-to-end testing against the flow's own execution log, and Terraform/OpenTofu management of all three.",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "author": {
         "name": "Daniel Bryar",
         "url": "https://github.com/dbryar"

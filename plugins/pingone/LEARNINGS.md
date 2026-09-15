@@ -21,6 +21,20 @@ and whether it is silent. What changed in the skill files, or why nothing did.
 
 ---
 
+## 2026-09-15 - A silent request arrives as `prompt`, and cannot write a cookie
+
+**Skill:** davinci
+**Confirmed by:** A controlled pair of authorisation requests against one live session on an AU tenant, with both parameters captured into flow context at the entry node and read back from the flow's execution log: the `prompt=none` request carried `prompt: "none"` and `auth_mode: ""`, the interactive one carried both empty. The cookie half was isolated the same way: an interactive run completed through the cookie node while a silent run through the same node did not, and routing the silent branch around it made the silent request complete with an authorization code.
+**Versions:** DaVinci as deployed 09-2026 / n/a
+
+The skill said the authorisation request reaches the flow as `auth_mode`, equal to `"silent"` for a silent request, and that `prompt` does not appear in flows that handle this correctly. On this tenant `auth_mode` arrives empty and `prompt` carries `none`, so a flow following that rule takes its interactive branch for every silent request. The failure is silent inside the flow and reaches the relying party as `login_required`, which is exactly what a correctly refused silent request returns, so nothing about the client's view distinguishes "refused because no session" from "never recognised as silent". Only the flow log shows which route ran.
+
+Following the interactive branch then surfaced a second constraint: a `cookieConnector` write cannot complete on a `prompt=none` request, because the write needs a round trip through the browser. PingOne ends the request at that node with `login_required` before the success terminal runs, and records no audit event for the authentication at all. In the log the cookie node logs one `Send Response` where an interactive run logs two, and the following entry is an untitled `returnErrorResponseRedirect` emitted by the engine rather than a terminal in the graph.
+
+Both are now in `davinci/SKILL.md`: the parameter rule rewritten in place under the binding section, and the cookie constraint added under "Terminals", with a pointer from the `cookieConnector` write row in `reference/connectors.md`. The `auth_mode` name is kept as an accepted alternative rather than deleted, since it is what Ping's guidance describes and what an older tenant or another region may populate.
+
+---
+
 ## 2026-09-11 - A read-only credential reads execution logs; `pingone:qa` added
 
 **Skill:** qa

@@ -105,7 +105,7 @@ Binding forms:
 
 **A `saveValue` entry targeting a pre-declared `flowInstance` variable needs both `name` and `variableId`.** With `name` alone, the node round-trips through the API unchanged, Studio shows its variable selector unset, and the write never happens. The target variable sits at its declared default forever and nothing reports an error.
 
-**The authorisation request reaches the flow as `auth_mode`, not `prompt`.** PingOne derives it. A silent authentication request is `{{global.parameters.authorizationRequest.auth_mode}}` equal to `"silent"`. The string `prompt` does not appear in flows that handle this correctly.
+**Read a silent request from `prompt`, and accept `auth_mode` as well.** `{{global.parameters.authorizationRequest.prompt}}` is `none` for a `prompt=none` request. `{{global.parameters.authorizationRequest.auth_mode}}`, which PingOne is documented to derive as `silent` for the same request, arrives **empty** on a current AU tenant (observed 09-2026), so a flow reading only `auth_mode` treats every silent request as interactive and takes its interactive branch. Nothing errors, and the relying party receives `login_required`, which is also what a legitimately refused silent request returns, so the two are indistinguishable from the client. Capture both at the flow's entry node into your own context, and treat the request as silent if either says so.
 
 `{{global.parameters.application}}` and `{{global.parameters.authorizationRequest.client_id}}` give you the calling client. `client_id` is a PingOne application UUID, so if you need it as a key for brand or configuration lookup you need an explicit mapping; the UUID is not meaningful on its own.
 
@@ -162,6 +162,8 @@ That constraint decides how a form may be authored, so it belongs here. Which fi
 | Subflow, success | `httpConnector` / `createSuccessResponse` |
 
 A main flow ending on `createSuccessResponse` returns plain JSON and never establishes a PingOne authentication session or issues an authorization code. It looks like it completed.
+
+**A silent branch must not pass through a node that writes a cookie.** `cookieConnector`'s write capabilities need a round trip through the browser, and a `prompt=none` request allows none: PingOne ends the request at that node with `login_required`, before the success terminal runs, and records no audit event for the authentication. In the flow log the cookie node logs a single `Send Response` where an interactive run through the same node logs two a few tens of milliseconds apart, and the next entry is a `returnErrorResponseRedirect` with no node title, which is the engine's own rather than a terminal in the graph. Route the silent path around every cookie write and keep the write on the interactive path, which can afford the round trip.
 
 ### Custom claims on the success terminal
 
