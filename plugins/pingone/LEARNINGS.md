@@ -21,6 +21,20 @@ and whether it is silent. What changed in the skill files, or why nothing did.
 
 ---
 
+## 2026-10-13 - A form with a DEVICE_AUTHENTICATION field does not answer `submit`
+
+**Skill:** davinci
+**Confirmed by:** Execution logs of three runs of one deployed flow, one per method, each choosing a device on a `showForm` node and pressing the form's submit button. Control: the other `showForm` nodes in the same flows (a sign-on form and a one-time-code form) log `results: ["submit"]` for their submit buttons.
+**Versions:** n/a (DaVinci as deployed on that date; observed through `@forgerock/davinci-client` 2.2.0)
+
+`reference/connectors.md` said "One `submit` outcome per form". That is wrong for a form carrying a `DEVICE_AUTHENTICATION` field: its node returned `results: ["mfa_text_message"]`, `["mfa_email"]` and `["mfa_auth_app"]` for an SMS, an email and a TOTP device, with `event.buttonValue: "submit"` in the same response. A node declaring only `submit` logged success and nothing after it, and the client received `400 requestTimedOut`. Silent, and indistinguishable from an unclaimed outcome: the difference is only in the node's own `results`.
+
+The same logs show the field's value as an object, `formData.<key> = { id, type, value }`. A function node bound to the whole object would have compared it with device IDs as text and matched none; this was read from the log and the function's source, not observed failing, because no run got past the form node.
+
+Changed: the `showForm` entry in `davinci/reference/connectors.md` (the wrong line rewritten, the result table and the object shape added), a pointer under "Branching" in `davinci/SKILL.md`, and a one-line pointer from the device field bullet in `sdk/SKILL.md`.
+
+Not established: the results for `FIDO2` and `MOBILE`, which the form did not offer. And the corrected flow (one outcome per type, an EVAL each, converging) had been generated and planned but not deployed when this was written, so the remedy rests on the existing outcome rules under "Branching", not on a run of its own.
+
 ## 2026-09-15 - A silent request arrives as `prompt`, and cannot write a cookie
 
 **Skill:** davinci

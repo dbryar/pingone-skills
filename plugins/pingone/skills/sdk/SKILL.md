@@ -50,7 +50,7 @@ A collector's type, key, label, options and validation are all decided in the Pi
 
 - **A field's `key` is what the flow branches on, not its label.** Renaming a `FLOW_BUTTON`'s key is a flow change, not a copy change, and the flow will branch on the old key until it is updated too.
 - **A form field key round-trips asymmetrically.** A field keyed `user.username` is authored dotted, submitted dotted by the SDK (`formData: {"user.username": ...}`), and returned to the flow nested (`output.formData.user.username`). Bind downstream nodes against the nested path. A dotted binding resolves to nothing, silently. This is a flow-authoring consequence and `pingone:davinci` carries it too.
-- **A device selection field declares method types, not devices.** `DEVICE_AUTHENTICATION` and `DEVICE_REGISTRATION` fields carry an `options` list of method types (`SMS`, `EMAIL`, `TOTP`, `FIDO2`); PingOne fills in the user's actual devices at runtime. The field set is fixed and the collector's options are not what the form author wrote.
+- **A device selection field declares method types, not devices.** `DEVICE_AUTHENTICATION` and `DEVICE_REGISTRATION` fields carry an `options` list of method types (`SMS`, `EMAIL`, `TOTP`, `FIDO2`); PingOne fills in the user's actual devices at runtime. The field set is fixed and the collector's options are not what the form author wrote. The flow side of this field (the node result it produces, and the object it submits) is in `pingone:davinci`'s `reference/connectors.md` under `showForm`.
 
 ## Driving the flow
 
