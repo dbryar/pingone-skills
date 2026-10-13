@@ -108,5 +108,15 @@ This is the connector an embedded SDK client can render; a `customHTMLTemplate` 
 
 - **The form is a PingOne resource, not flow content.** The node holds only its ID, which is environment-specific — generate it in rather than committing a literal.
 - **`formData` keys must exist as field keys on the referenced form.** A key that does not match binds to nothing and the flow JSON does not say so.
-- **One `submit` outcome per form**, claimed by its edge's `multi_value_source_id`. Branch after the form on what was submitted, not by the form offering several exits.
+- **A form's submit button answers with the result `submit`, unless the form carries a `DEVICE_AUTHENTICATION` field.** The outcome is claimed by its edge's `multi_value_source_id`. Declare an outcome for every result the node can return, and no others.
+- **A form with a `DEVICE_AUTHENTICATION` field answers with a result named for the type of the device chosen, never `submit`.** The node needs one outcome per method type the form offers, each claimed by its own edge and landing on its own EVAL; they may converge afterwards. Declared as `submit` alone, no result matches: the node logs `success: true`, nothing downstream is logged, and the client receives `400 requestTimedOut`, the signature of an unclaimed outcome. `event.buttonValue` in the node's response still reads `submit`, so read `results`, not the event.
+
+  | Method type | `results` |
+  | --- | --- |
+  | `SMS` | `mfa_text_message` |
+  | `EMAIL` | `mfa_email` |
+  | `TOTP` | `mfa_auth_app` |
+
+  The results for `FIDO2` and `MOBILE` have not been observed. Read one from a run's log before offering either on a form.
+- **A `DEVICE_AUTHENTICATION` field comes back as an object, not an ID.** `output.formData.<key>` is `{ id, type, value }`: the device's ID, its type, and the masked target shown to the user. Bind `formData.<key>.id` where a device ID is wanted. A binding to the whole object is not a device ID.
 - **The submitted value comes back nested.** A field keyed `user.username` returns as `output.formData.user.username`, though it is authored and submitted dotted.
