@@ -111,12 +111,19 @@ This is the connector an embedded SDK client can render; a `customHTMLTemplate` 
 - **A form's submit button answers with the result `submit`, unless the form carries a `DEVICE_AUTHENTICATION` field.** The outcome is claimed by its edge's `multi_value_source_id`. Declare an outcome for every result the node can return, and no others.
 - **A form with a `DEVICE_AUTHENTICATION` field answers with a result named for the type of the device chosen, never `submit`.** The node needs one outcome per method type the form offers, each claimed by its own edge and landing on its own EVAL; they may converge afterwards. Declared as `submit` alone, no result matches: the node logs `success: true`, nothing downstream is logged, and the client receives `400 requestTimedOut`, the signature of an unclaimed outcome. `event.buttonValue` in the node's response still reads `submit`, so read `results`, not the event.
 
-  | Method type | `results` |
-  | --- | --- |
-  | `SMS` | `mfa_text_message` |
-  | `EMAIL` | `mfa_email` |
-  | `TOTP` | `mfa_auth_app` |
+  | Method | `results` | Seen |
+  | --- | --- | --- |
+  | SMS | `mfa_text_message` | Logged run, authentication form |
+  | Email | `mfa_email` | Logged run, authentication form |
+  | Authenticator app (`TOTP`) | `mfa_auth_app` | Logged run, authentication form |
+  | `FIDO2` | `mfa_fido2` | Studio export, registration form |
+  | Mobile app (`MOBILE`) | `mfa_mobile_app` | Studio export, registration form |
+  | Voice | `mfa_voice` | Studio export, registration form |
+  | WhatsApp | `mfa_whatsapp` | Studio export, registration form |
+  | YubiKey | `mfa_yubikey` | Studio export, registration form |
+  | Hardware token | `mfa_oath_token` | Studio export, registration form |
+  | PingID desktop app | `mfa_pingid_desktop_gen2` | Studio export, registration form |
 
-  The results for `FIDO2` and `MOBILE` have not been observed. Read one from a run's log before offering either on a form.
+  Studio writes this list as the `outcomes` of a `showForm` node whose form carries a `DEVICE_REGISTRATION` field, together with `cancel-field` for the form's cancel link. The three results logged from an authentication form match it name for name. A result marked as seen only in an export has not been logged from an authentication form: confirm it from one run's log when first offering that method.
 - **A `DEVICE_AUTHENTICATION` field comes back as an object, not an ID.** `output.formData.<key>` is `{ id, type, value }`: the device's ID, its type, and the masked target shown to the user. Bind `formData.<key>.id` where a device ID is wanted. A binding to the whole object is not a device ID.
 - **The submitted value comes back nested.** A field keyed `user.username` returns as `output.formData.user.username`, though it is authored and submitted dotted.
