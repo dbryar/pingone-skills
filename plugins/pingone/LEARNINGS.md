@@ -21,6 +21,28 @@ and whether it is silent. What changed in the skill files, or why nothing did.
 
 ---
 
+## 2026-10-14 - The full table of device form results
+
+**Skill:** davinci
+**Confirmed by:** Read from a Studio export (04-09-2026) of a flow whose `showForm` node shows a form with a `DEVICE_REGISTRATION` field. Studio had written the node's `outcomes` itself: ten `mfa_*` results, one per method, and `cancel-field`.
+**Versions:** n/a (DaVinci Studio export of that date)
+
+Before, three results were known, each from a logged run of an authentication form (`mfa_text_message`, `mfa_email`, `mfa_auth_app`), and the results for `FIDO2` and `MOBILE` were recorded as not established. The export gives the whole vocabulary: `mfa_fido2`, `mfa_mobile_app`, `mfa_voice`, `mfa_whatsapp`, `mfa_yubikey`, `mfa_oath_token` and `mfa_pingid_desktop_gen2` besides the three. The three logged names match the export exactly.
+
+What is not confirmed: the export is of a registration form, and no authentication form has been logged returning any of the seven new names. The table says which source each row has.
+
+Changed: the table under `showForm` in `skills/davinci/reference/connectors.md` now lists all ten with their source, and the Branching bullet in `skills/davinci/SKILL.md` names the two most likely to be needed next.
+
+## 2026-10-13 - One outcome per method type routes a device authentication form
+
+**Skill:** davinci
+**Confirmed by:** Execution logs of three runs of the corrected flow after it was deployed, one per method (SMS, email, TOTP). In each, the form node's result was followed by the next node, a function bound to `formData.<key>.id` received the chosen device's ID, and the challenge for that device started. The TOTP run was completed to a successful sign-in.
+**Versions:** n/a (DaVinci as deployed on that date)
+
+The entry below recorded the remedy as generated and planned but not deployed. It has now run: one declared outcome per method type, each claimed by its own edge and landing on its own EVAL, converging on one node, routes all three results. The `.id` binding resolves to the device ID.
+
+Changed: nothing in the skill files, which already state the rule.
+
 ## 2026-10-13 - A form with a DEVICE_AUTHENTICATION field does not answer `submit`
 
 **Skill:** davinci
